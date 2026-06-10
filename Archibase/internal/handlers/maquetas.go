@@ -31,3 +31,9 @@ func CrearMaqueta(respuesta http.ResponseWriter, peticion *http.Request) {
 	respuesta.WriteHeader(http.StatusCreated)
 	json.NewEncoder(respuesta).Encode(nuevaMaqueta)
 }
+
+func ObtenerMaquetas(respuesta http.ResponseWriter, peticion *http.Request) {
+	respuesta.Header().Set("Content-Type", "application/json")
+	fmt.Println("--> Obteniendo todas las maquetas")
+	json.NewEncoder(respuesta).Encode(storage.ListaMaquetas)
+}

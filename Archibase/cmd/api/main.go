@@ -14,6 +14,7 @@ func main() {
 	enrutador := chi.NewRouter()
 	enrutador.Route("/api/v1/maquetas", func(r chi.Router) {
 		r.Post("/", handlers.CrearMaqueta)
+		r.Get("/", handlers.ObtenerMaquetas)
 	})
 	fmt.Println("Servidor de Archibase corriendo en http://localhost:8080")
 	http.ListenAndServe(":8080", enrutador)
