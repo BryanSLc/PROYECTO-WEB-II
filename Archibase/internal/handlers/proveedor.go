@@ -90,3 +90,27 @@ func ActualizarProveedor(
 	}
 	w.WriteHeader(http.StatusNotFound)
 }
+
+func EliminarProveedor(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	idTexto := chi.URLParam(r, "id")
+	id, err := strconv.Atoi(idTexto)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	for i, proveedor := range storage.ListaProveedores {
+		if proveedor.ID == id {
+			storage.ListaProveedores =
+				append(
+					storage.ListaProveedores[:i],
+					storage.ListaProveedores[i+1:]...,
+				)
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+	}
+	w.WriteHeader(http.StatusNotFound)
+}
