@@ -5,6 +5,10 @@ import (
 	"fmt"
 	"net/http"
 
+	"strconv"
+
+	"github.com/go-chi/chi/v5"
+
 	"proyecto/internal/models"
 	"proyecto/internal/storage"
 )
@@ -36,4 +40,25 @@ func ObtenerMaquetas(respuesta http.ResponseWriter, peticion *http.Request) {
 	respuesta.Header().Set("Content-Type", "application/json")
 	fmt.Println("--> Obteniendo todas las maquetas")
 	json.NewEncoder(respuesta).Encode(storage.ListaMaquetas)
+}
+
+func ObtenerMaquetaPorID(respuesta http.ResponseWriter, peticion *http.Request) {
+	respuesta.Header().Set("Content-Type", "application/json")
+	idTexto := chi.URLParam(peticion, "id")
+	id, err := strconv.Atoi(idTexto)
+	if err != nil {
+		respuesta.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(respuesta).Encode(map[string]string{"error": "ID invalido"})
+		return
+	}
+
+	for _, maqueta := range storage.ListaMaquetas {
+		if maqueta.ID == id {
+			fmt.Println("--> Maqueta encontrada con ID:", id)
+			json.NewEncoder(respuesta).Encode(maqueta)
+			return
+		}
+	}
+	respuesta.WriteHeader(http.StatusNotFound)
+	json.NewEncoder(respuesta).Encode(map[string]string{"error": "Maqueta no encontrada"})
 }
