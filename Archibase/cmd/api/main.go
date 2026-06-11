@@ -17,6 +17,7 @@ func main() {
 		r.Get("/", handlers.ObtenerMaquetas)
 		r.Get("/{id}", handlers.ObtenerMaquetaPorID)
 		r.Put("/{id}", handlers.ActualizarMaqueta)
+		r.Put("/{id}", handlers.EliminarMaqueta)
 	})
 	// Rutas de proveedor
 	enrutador.Route("/api/v1/proveedores", func(r chi.Router) {
