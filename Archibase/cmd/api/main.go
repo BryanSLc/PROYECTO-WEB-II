@@ -16,6 +16,7 @@ func main() {
 		r.Post("/", handlers.CrearMaqueta)
 		r.Get("/", handlers.ObtenerMaquetas)
 		r.Get("/{id}", handlers.ObtenerMaquetaPorID)
+		r.Put("/{id}", handlers.ActualizarMaqueta)
 
 	})
 	fmt.Println("Servidor de Archibase corriendo en http://localhost:8080")
