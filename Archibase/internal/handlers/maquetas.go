@@ -99,3 +99,25 @@ func ActualizarMaqueta(respuesta http.ResponseWriter, peticion *http.Request) {
 	respuesta.WriteHeader(http.StatusNotFound)
 	json.NewEncoder(respuesta).Encode(map[string]string{"error": "Maqueta no encontrada"})
 }
+
+func EliminarMaqueta(respuesta http.ResponseWriter, peticion *http.Request) {
+	respuesta.Header().Set("Content-Type", "application/json")
+	idTexto := chi.URLParam(peticion, "id")
+	id, err := strconv.Atoi(idTexto)
+	if err != nil {
+		respuesta.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(respuesta).Encode(map[string]string{"error": "ID invalido"})
+		return
+	}
+	for i, maqueta := range storage.ListaMaquetas {
+		if maqueta.ID == id {
+			storage.ListaMaquetas = append(storage.ListaMaquetas[:i], storage.ListaMaquetas[i+1:]...)
+
+			fmt.Println("--> Maqueta eliminada con ID:", id)
+			json.NewEncoder(respuesta).Encode(map[string]string{"mensaje": "Maqueta eliminada correctamente"})
+			return
+		}
+	}
+	respuesta.WriteHeader(http.StatusNotFound)
+	json.NewEncoder(respuesta).Encode(map[string]string{"error": "Maqueta no encontrada"})
+}
