@@ -81,4 +81,12 @@ func DeleteServicio(w http.ResponseWriter, r *http.Request) {
     if err != nil {
         http.Error(w, `{"error":"ID invalido"}`, http.StatusBadRequest)
         return
-   
+    }
+    if err := storage.DeleteServicio(id); err != nil {
+        http.Error(w, `{"error":"servicio no encontrado"}`, http.StatusNotFound)
+        return
+    }
+    w.Header().Set("Content-Type", "application/json")
+    w.WriteHeader(http.StatusOK)
+    json.NewEncoder(w).Encode(map[string]string{"mensaje": "servicio eliminado"})
+}
