@@ -15,6 +15,7 @@ func main() {
 	enrutador.Route("/api/v1/maquetas", func(r chi.Router) {
 		r.Post("/", handlers.CrearMaqueta)
 		r.Get("/", handlers.ObtenerMaquetas)
+		r.Get("/{id}", handlers.ObtenerMaquetaPorID)
 
 	})
 	fmt.Println("Servidor de Archibase corriendo en http://localhost:8080")
