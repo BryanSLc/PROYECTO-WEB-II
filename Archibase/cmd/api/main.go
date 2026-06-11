@@ -21,6 +21,8 @@ func main() {
 		r.Post("/", handlers.CrearProveedor)
 		r.Get("/", handlers.ObtenerProveedores)
 		r.Get("/{id}", handlers.ObtenerProveedorPorID)
+		r.Put("/{id}", handlers.ActualizarProveedor)
+		r.Delete("/{id}", handlers.EliminarProveedor)
 	})
 	fmt.Println("Servidor de Archibase corriendo en http://localhost:8080")
 	http.ListenAndServe(":8080", enrutador)
