@@ -71,9 +71,6 @@ func main() {
 		r.Delete("/{id}", handlers.EliminarMaterial)
 	})
 	fmt.Println("Servidor de Archibase corriendo en http://localhost:8080")
-	http.ListenAndServe(":8080", enrutador)
-
-	fmt.Println("Servidor de Archibase corriendo en http://localhost:8080")
 
 	if err := http.ListenAndServe(":8080", enrutador); err != nil {
 		fmt.Println("Error al iniciar servidor:", err)
