@@ -43,6 +43,14 @@ func main() {
 		r.Put("/{id}", handlers.UpdateContratacion)
 		r.Delete("/{id}", handlers.DeleteContratacion)
 	})
+	//rutas de material
+	enrutador.Route("/api/v1/materiales", func(r chi.Router) {
+		r.Post("/", handlers.CrearMaterial)
+		r.Get("/", handlers.ObtenerMateriales)
+		r.Get("/{id}", handlers.ObtenerMaterialPorID)
+		r.Put("/{id}", handlers.ActualizarMaterial)
+		r.Delete("/{id}", handlers.EliminarMaterial)
+	})
 	// Rutas de ubicacion
 	enrutador.Route("/api/v1/ubicaciones", func(r chi.Router) {
 		r.Post("/", handlers.CrearUbicacion)
