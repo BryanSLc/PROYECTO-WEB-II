@@ -51,6 +51,14 @@ func main() {
 		r.Put("/{id}", handlers.ActualizarUbicacion)
 		r.Delete("/{id}", handlers.EliminarUbicacion)
 	})
+	// Rutas de material_proveedor
+	enrutador.Route("/api/v1/materiales", func(r chi.Router) {
+		r.Post("/", handlers.CrearMaterial)
+		r.Get("/", handlers.ObtenerMateriales)
+		r.Get("/{id}", handlers.ObtenerMaterialPorID)
+		r.Put("/{id}", handlers.ActualizarMaterial)
+		r.Delete("/{id}", handlers.EliminarMaterial)
+	})
 	fmt.Println("Servidor de Archibase corriendo en http://localhost:8080")
 	http.ListenAndServe(":8080", enrutador)
 
