@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -31,12 +32,14 @@ func CrearProveedor(w http.ResponseWriter, r *http.Request) {
 
 	storage.ListaProveedores =
 		append(storage.ListaProveedores, nuevoProveedor)
+	fmt.Println("--> Proveedor creado con ID:", nuevoProveedor.ID)
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(nuevoProveedor)
 }
 
 func ObtenerProveedores(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	fmt.Println("--> Obteniendo todos los proveedores")
 	json.NewEncoder(w).Encode(storage.ListaProveedores)
 }
 
@@ -53,11 +56,13 @@ func ObtenerProveedorPorID(
 
 	for _, proveedor := range storage.ListaProveedores {
 		if proveedor.ID == id {
+			fmt.Println("--> Proveedor encontrado con ID:", id)
 			json.NewEncoder(w).Encode(proveedor)
 			return
 		}
 	}
 
+	fmt.Println("--> Proveedor no encontrado con ID:", id)
 	w.WriteHeader(http.StatusNotFound)
 }
 
@@ -65,7 +70,6 @@ func ActualizarProveedor(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-
 	idTexto := chi.URLParam(r, "id")
 	id, err := strconv.Atoi(idTexto)
 	if err != nil {
@@ -84,10 +88,12 @@ func ActualizarProveedor(
 		if proveedor.ID == id {
 			actualizado.ID = id
 			storage.ListaProveedores[i] = actualizado
+			fmt.Println("--> Proveedor actualizado con ID:", id)
 			json.NewEncoder(w).Encode(actualizado)
 			return
 		}
 	}
+	fmt.Println("--> Proveedor no encontrado con ID:", id)
 	w.WriteHeader(http.StatusNotFound)
 }
 
@@ -108,9 +114,11 @@ func EliminarProveedor(
 					storage.ListaProveedores[:i],
 					storage.ListaProveedores[i+1:]...,
 				)
+			fmt.Println("--> Proveedor eliminado con ID:", id)
 			w.WriteHeader(http.StatusOK)
 			return
 		}
 	}
+	fmt.Println("--> Proveedor no encontrado con ID:", id)
 	w.WriteHeader(http.StatusNotFound)
 }
