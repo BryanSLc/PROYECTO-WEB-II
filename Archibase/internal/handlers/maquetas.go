@@ -58,7 +58,7 @@ func ObtenerMaquetaPorID(respuesta http.ResponseWriter, peticion *http.Request) 
 			return
 		}
 	}
-	respuesta.WriteHeader(http.StatusNotFound)
+	respuesta.WriteHeader(http.StatusNotFound) //error 404
 	json.NewEncoder(respuesta).Encode(map[string]string{"error": "Maqueta no encontrada"})
 }
 
@@ -80,7 +80,7 @@ func ActualizarMaqueta(respuesta http.ResponseWriter, peticion *http.Request) {
 		return
 	}
 	if maquetaActualizada.Titulo == "" {
-		respuesta.WriteHeader(http.StatusBadRequest)
+		respuesta.WriteHeader(http.StatusBadRequest) //400 error
 		json.NewEncoder(respuesta).Encode(map[string]string{"error": "El titulo es obligatorio"})
 		return
 	}
