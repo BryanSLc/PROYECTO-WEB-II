@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -25,14 +26,15 @@ func CrearUbicacion(w http.ResponseWriter, r *http.Request) {
 	}
 	nuevaUbicacion.ID = storage.ConteoUbicaciones
 	storage.ConteoUbicaciones++
-	storage.ListaUbicaciones =
-		append(storage.ListaUbicaciones, nuevaUbicacion)
+	storage.ListaUbicaciones = append(storage.ListaUbicaciones, nuevaUbicacion)
+	fmt.Println("--> Ubicacion creada con ID:", nuevaUbicacion.ID)
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(nuevaUbicacion)
 }
 
 func ObtenerUbicaciones(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	fmt.Println("--> Obteniendo todas las ubicaciones")
 	json.NewEncoder(w).Encode(storage.ListaUbicaciones)
 }
 
@@ -45,10 +47,12 @@ func ObtenerUbicacionPorID(w http.ResponseWriter, r *http.Request) {
 	}
 	for _, ubicacion := range storage.ListaUbicaciones {
 		if ubicacion.ID == id {
+			fmt.Println("--> Ubicacion encontrada con ID:", id)
 			json.NewEncoder(w).Encode(ubicacion)
 			return
 		}
 	}
+	fmt.Println("--> Ubicacion no encontrada con ID:", id)
 	w.WriteHeader(http.StatusNotFound)
 }
 
@@ -69,10 +73,12 @@ func ActualizarUbicacion(w http.ResponseWriter, r *http.Request) {
 		if ubicacion.ID == id {
 			ubicacionActualizada.ID = id
 			storage.ListaUbicaciones[i] = ubicacionActualizada
+			fmt.Println("--> Ubicacion actualizada con ID:", id)
 			json.NewEncoder(w).Encode(ubicacionActualizada)
 			return
 		}
 	}
+	fmt.Println("--> Ubicacion no encontrada con ID:", id)
 	w.WriteHeader(http.StatusNotFound)
 }
 
@@ -85,14 +91,15 @@ func EliminarUbicacion(w http.ResponseWriter, r *http.Request) {
 	}
 	for i, ubicacion := range storage.ListaUbicaciones {
 		if ubicacion.ID == id {
-			storage.ListaUbicaciones =
-				append(
-					storage.ListaUbicaciones[:i],
-					storage.ListaUbicaciones[i+1:]...,
-				)
+			storage.ListaUbicaciones = append(
+				storage.ListaUbicaciones[:i],
+				storage.ListaUbicaciones[i+1:]...,
+			)
+			fmt.Println("--> Ubicacion eliminada con ID:", id)
 			w.WriteHeader(http.StatusOK)
 			return
 		}
 	}
+	fmt.Println("--> Ubicacion no encontrada con ID:", id)
 	w.WriteHeader(http.StatusNotFound)
 }

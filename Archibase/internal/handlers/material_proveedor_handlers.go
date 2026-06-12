@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -27,12 +28,14 @@ func CrearMaterial(w http.ResponseWriter, r *http.Request) {
 	storage.ConteoMateriales++
 	storage.ListaMateriales =
 		append(storage.ListaMateriales, nuevoMaterial)
+	fmt.Println("--> Material creado con ID:", nuevoMaterial.ID)
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(nuevoMaterial)
 }
 
 func ObtenerMateriales(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	fmt.Println("--> Obteniendo todos los materiales")
 	json.NewEncoder(w).Encode(storage.ListaMateriales)
 }
 
@@ -45,10 +48,12 @@ func ObtenerMaterialPorID(w http.ResponseWriter, r *http.Request) {
 	}
 	for _, material := range storage.ListaMateriales {
 		if material.ID == id {
+			fmt.Println("--> Material encontrado con ID:", id)
 			json.NewEncoder(w).Encode(material)
 			return
 		}
 	}
+	fmt.Println("--> Material no encontrado con ID:", id)
 	w.WriteHeader(http.StatusNotFound)
 }
 
@@ -69,10 +74,12 @@ func ActualizarMaterial(w http.ResponseWriter, r *http.Request) {
 		if material.ID == id {
 			materialActualizado.ID = id
 			storage.ListaMateriales[i] = materialActualizado
+			fmt.Println("--> Material actualizado con ID:", id)
 			json.NewEncoder(w).Encode(materialActualizado)
 			return
 		}
 	}
+	fmt.Println("--> Material no encontrado con ID:", id)
 	w.WriteHeader(http.StatusNotFound)
 }
 
@@ -90,9 +97,11 @@ func EliminarMaterial(w http.ResponseWriter, r *http.Request) {
 					storage.ListaMateriales[:i],
 					storage.ListaMateriales[i+1:]...,
 				)
+			fmt.Println("--> Material eliminado con ID:", id)
 			w.WriteHeader(http.StatusOK)
 			return
 		}
 	}
+	fmt.Println("--> Material no encontrado con ID:", id)
 	w.WriteHeader(http.StatusNotFound)
 }

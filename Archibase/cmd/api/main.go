@@ -46,7 +46,7 @@ func main() {
 		r.Put("/{id}", handlers.ActualizarContratacion)
 		r.Delete("/{id}", handlers.EliminarContratacion)
 	})
-	// Rutas de ubicaciones
+	// Rutas de ubicacion
 	enrutador.Route("/api/v1/ubicaciones", func(r chi.Router) {
 		r.Post("/", handlers.CrearUbicacion)
 		r.Get("/", handlers.ObtenerUbicaciones)
