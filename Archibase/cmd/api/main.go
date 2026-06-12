@@ -32,21 +32,20 @@ func main() {
 
 	// Rutas de asesores
 	enrutador.Route("/api/v1/asesores", func(r chi.Router) {
-		r.Post("/", handlers.CrearAsesor)
-		r.Get("/", handlers.ObtenerAsesores)
-		r.Get("/{id}", handlers.ObtenerAsesorPorID)
-		r.Put("/{id}", handlers.ActualizarAsesor)
-		r.Delete("/{id}", handlers.EliminarAsesor)
+		r.Get("/", handlers.GetAllAsesores)
+		r.Post("/", handlers.CreateAsesor)
+		r.Get("/{id}", handlers.GetAsesorByID)
+		r.Put("/{id}", handlers.UpdateAsesor)
+		r.Delete("/{id}", handlers.DeleteAsesor)
 	})
-
 	// Rutas de contrataciones
-enrutador.Route("/api/v1/contrataciones", func(r chi.Router) {
-	r.Get("/", handlers.ObtenerContrataciones)
-	r.Post("/", handlers.CrearContratacion)
-	r.Get("/{id}", handlers.ObtenerContratacionPorID)
-	r.Put("/{id}", handlers.ActualizarContratacion)
-	r.Delete("/{id}", handlers.EliminarContratacion)
-})
+	enrutador.Route("/api/v1/contrataciones", func(r chi.Router) {
+		r.Get("/", handlers.ObtenerContrataciones)
+		r.Post("/", handlers.CrearContratacion)
+		r.Get("/{id}", handlers.ObtenerContratacionPorID)
+		r.Put("/{id}", handlers.ActualizarContratacion)
+		r.Delete("/{id}", handlers.EliminarContratacion)
+	})
 	// Rutas de ubicaciones
 	enrutador.Route("/api/v1/ubicaciones", func(r chi.Router) {
 		r.Post("/", handlers.CrearUbicacion)
@@ -55,14 +54,14 @@ enrutador.Route("/api/v1/contrataciones", func(r chi.Router) {
 		r.Put("/{id}", handlers.ActualizarUbicacion)
 		r.Delete("/{id}", handlers.EliminarUbicacion)
 	})
-	// Rutas de servicios 
+	// Rutas de servicios
 	enrutador.Route("/api/v1/servicios", func(r chi.Router) {
-	r.Get("/", handlers.ObtenerServicios)
-	r.Post("/", handlers.CrearServicio)
-	r.Get("/{id}", handlers.ObtenerServicioPorID)
-	r.Put("/{id}", handlers.ActualizarServicio)
-	r.Delete("/{id}", handlers.EliminarServicio)
-})
+		r.Get("/", handlers.ObtenerServicios)
+		r.Post("/", handlers.CrearServicio)
+		r.Get("/{id}", handlers.ObtenerServicioPorID)
+		r.Put("/{id}", handlers.ActualizarServicio)
+		r.Delete("/{id}", handlers.EliminarServicio)
+	})
 	// Rutas de material_proveedor
 	enrutador.Route("/api/v1/materiales", func(r chi.Router) {
 		r.Post("/", handlers.CrearMaterial)
