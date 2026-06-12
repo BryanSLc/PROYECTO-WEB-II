@@ -40,14 +40,13 @@ func main() {
 	})
 
 	// Rutas de contrataciones
-	enrutador.Route("/api/v1/contrataciones", func(r chi.Router) {
-		r.Post("/", handlers.CreateContratacion)
-		r.Get("/", handlers.GetAllContrataciones)
-		r.Get("/{id}", handlers.GetContratacionByID)
-		r.Put("/{id}", handlers.UpdateContratacion)
-		r.Delete("/{id}", handlers.DeleteContratacion)
-	})
-
+enrutador.Route("/api/v1/contrataciones", func(r chi.Router) {
+	r.Get("/", handlers.ObtenerContrataciones)
+	r.Post("/", handlers.CrearContratacion)
+	r.Get("/{id}", handlers.ObtenerContratacionPorID)
+	r.Put("/{id}", handlers.ActualizarContratacion)
+	r.Delete("/{id}", handlers.EliminarContratacion)
+})
 	// Rutas de ubicaciones
 	enrutador.Route("/api/v1/ubicaciones", func(r chi.Router) {
 		r.Post("/", handlers.CrearUbicacion)
@@ -56,6 +55,24 @@ func main() {
 		r.Put("/{id}", handlers.ActualizarUbicacion)
 		r.Delete("/{id}", handlers.EliminarUbicacion)
 	})
+	// Rutas de servicios 
+	enrutador.Route("/api/v1/servicios", func(r chi.Router) {
+	r.Get("/", handlers.ObtenerServicios)
+	r.Post("/", handlers.CrearServicio)
+	r.Get("/{id}", handlers.ObtenerServicioPorID)
+	r.Put("/{id}", handlers.ActualizarServicio)
+	r.Delete("/{id}", handlers.EliminarServicio)
+})
+	// Rutas de material_proveedor
+	enrutador.Route("/api/v1/materiales", func(r chi.Router) {
+		r.Post("/", handlers.CrearMaterial)
+		r.Get("/", handlers.ObtenerMateriales)
+		r.Get("/{id}", handlers.ObtenerMaterialPorID)
+		r.Put("/{id}", handlers.ActualizarMaterial)
+		r.Delete("/{id}", handlers.EliminarMaterial)
+	})
+	fmt.Println("Servidor de Archibase corriendo en http://localhost:8080")
+	http.ListenAndServe(":8080", enrutador)
 
 	fmt.Println("Servidor de Archibase corriendo en http://localhost:8080")
 
