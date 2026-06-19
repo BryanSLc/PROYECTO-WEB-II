@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -11,184 +12,111 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-// Obtener todas las contrataciones
-func ObtenerContrataciones(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
-	contrataciones := storage.GetAllContrataciones()
-
-	json.NewEncoder(w).Encode(contrataciones)
-}
-
-// Obtener contratación por ID
-func ObtenerContratacionPorID(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
-	id, err := strconv.Atoi(chi.URLParam(r, "id"))
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{
-			"error": "ID inválido",
-		})
-		return
-	}
-
-	contratacion, err := storage.GetContratacionByID(id)
-	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(map[string]string{
-			"error": "Contratación no encontrada",
-		})
-		return
-	}
-
-	json.NewEncoder(w).Encode(contratacion)
-}
-
-// Crear contratación
-func CrearContratacion(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
+func CrearContratacion(respuesta http.ResponseWriter, peticion *http.Request) {
+	respuesta.Header().Set("Content-Type", "application/json")
 	var nuevaContratacion models.Contratacion
-
-	if err := json.NewDecoder(r.Body).Decode(&nuevaContratacion); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{
-			"error": "Datos inválidos",
-		})
+	lector := json.NewDecoder(peticion.Body)
+	err := lector.Decode(&nuevaContratacion)
+	if err != nil {
+		respuesta.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(respuesta).Encode(map[string]string{"error": "Datos invalidos"})
 		return
 	}
-
-	if nuevaContratacion.Estudiante == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{
-			"error": "El estudiante es obligatorio",
-		})
+	if nuevaContratacion.Detalle == "" { // Nota: Cambié 'Titulo' por 'Detalle'. Ajusta según tu struct.
+		respuesta.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(respuesta).Encode(map[string]string{"error": "El detalle es obligatorio"})
 		return
 	}
-
-	if nuevaContratacion.Fecha == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{
-			"error": "La fecha es obligatoria",
-		})
-		return
-	}
-
-	if nuevaContratacion.Estado == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{
-			"error": "El estado es obligatorio",
-		})
-		return
-	}
-
-	if nuevaContratacion.IDservicio == 0 {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{
-			"error": "El ID del servicio es obligatorio",
-		})
-		return
-	}
-
-	contratacionCreada := storage.CreateContratacion(nuevaContratacion)
-
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(contratacionCreada)
+	nuevaContratacion.ID = storage.ConteoContrataciones
+	storage.ConteoContrataciones++
+	storage.ListaContrataciones = append(storage.ListaContrataciones, nuevaContratacion)
+	fmt.Println("--> Contratación creada con ID:", nuevaContratacion.ID)
+	respuesta.WriteHeader(http.StatusCreated)
+	json.NewEncoder(respuesta).Encode(nuevaContratacion)
 }
 
-// Actualizar contratación
-func ActualizarContratacion(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
+func ObtenerContrataciones(respuesta http.ResponseWriter, peticion *http.Request) {
+	respuesta.Header().Set("Content-Type", "application/json")
+	fmt.Println("--> Obteniendo todas las contrataciones")
+	json.NewEncoder(respuesta).Encode(storage.ListaContrataciones)
+}
 
-	id, err := strconv.Atoi(chi.URLParam(r, "id"))
+func ObtenerContratacionPorID(respuesta http.ResponseWriter, peticion *http.Request) {
+	respuesta.Header().Set("Content-Type", "application/json")
+	idTexto := chi.URLParam(peticion, "id")
+	id, err := strconv.Atoi(idTexto)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{
-			"error": "ID inválido",
-		})
+		respuesta.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(respuesta).Encode(map[string]string{"error": "ID invalido"})
 		return
 	}
+	for _, contratacion := range storage.ListaContrataciones {
+		if contratacion.ID == id {
+			fmt.Println("--> Contratación encontrada con ID:", id)
+			json.NewEncoder(respuesta).Encode(contratacion)
+			return
+		}
+	}
+	respuesta.WriteHeader(http.StatusNotFound) // error 404
+	json.NewEncoder(respuesta).Encode(map[string]string{"error": "Contratación no encontrada"})
+}
 
+func ActualizarContratacion(respuesta http.ResponseWriter, peticion *http.Request) {
+	respuesta.Header().Set("Content-Type", "application/json")
+	idTexto := chi.URLParam(peticion, "id")
+	id, err := strconv.Atoi(idTexto)
+	if err != nil {
+		respuesta.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(respuesta).Encode(map[string]string{"error": "ID invalido"})
+		return
+	}
 	var contratacionActualizada models.Contratacion
-
-	if err := json.NewDecoder(r.Body).Decode(&contratacionActualizada); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{
-			"error": "Datos inválidos",
-		})
-		return
-	}
-
-	if contratacionActualizada.Estudiante == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{
-			"error": "El estudiante es obligatorio",
-		})
-		return
-	}
-
-	if contratacionActualizada.Fecha == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{
-			"error": "La fecha es obligatoria",
-		})
-		return
-	}
-
-	if contratacionActualizada.Estado == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{
-			"error": "El estado es obligatorio",
-		})
-		return
-	}
-
-	if contratacionActualizada.IDservicio == 0 {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{
-			"error": "El ID del servicio es obligatorio",
-		})
-		return
-	}
-
-	contratacion, err := storage.UpdateContratacion(id, contratacionActualizada)
+	lector := json.NewDecoder(peticion.Body)
+	err = lector.Decode(&contratacionActualizada)
 	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(map[string]string{
-			"error": "Contratación no encontrada",
-		})
+		respuesta.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(respuesta).Encode(map[string]string{"error": "Datos invalidos"})
 		return
 	}
-
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"mensaje":      "Contratación actualizada correctamente",
-		"contratacion": contratacion,
-	})
+	if contratacionActualizada.Detalle == "" {
+		respuesta.WriteHeader(http.StatusBadRequest) // 400 error
+		json.NewEncoder(respuesta).Encode(map[string]string{"error": "El detalle es obligatorio"})
+		return
+	}
+	for i, contratacion := range storage.ListaContrataciones {
+		if contratacion.ID == id {
+			contratacionActualizada.ID = id
+			storage.ListaContrataciones[i] = contratacionActualizada
+			fmt.Println("--> Contratación actualizada con ID:", id)
+			json.NewEncoder(respuesta).Encode(map[string]interface{}{
+				"mensaje":      "Contratación actualizada",
+				"contratacion": contratacionActualizada,
+			})
+			return
+		}
+	}
+	respuesta.WriteHeader(http.StatusNotFound)
+	json.NewEncoder(respuesta).Encode(map[string]string{"error": "Contratación no encontrada"})
 }
 
-// Eliminar contratación
-func EliminarContratacion(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
-	id, err := strconv.Atoi(chi.URLParam(r, "id"))
+func EliminarContratacion(respuesta http.ResponseWriter, peticion *http.Request) {
+	respuesta.Header().Set("Content-Type", "application/json")
+	idTexto := chi.URLParam(peticion, "id")
+	id, err := strconv.Atoi(idTexto)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{
-			"error": "ID inválido",
-		})
+		respuesta.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(respuesta).Encode(map[string]string{"error": "ID invalido"})
 		return
 	}
+	for i, contratacion := range storage.ListaContrataciones {
+		if contratacion.ID == id {
+			storage.ListaContrataciones = append(storage.ListaContrataciones[:i], storage.ListaContrataciones[i+1:]...)
 
-	if err := storage.DeleteContratacion(id); err != nil {
-		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(map[string]string{
-			"error": "Contratación no encontrada",
-		})
-		return
+			fmt.Println("--> Contratación eliminada con ID:", id)
+			json.NewEncoder(respuesta).Encode(map[string]string{"mensaje": "Contratación eliminada correctamente"})
+			return
+		}
 	}
-
-	json.NewEncoder(w).Encode(map[string]string{
-		"mensaje": "Contratación eliminada correctamente",
-	})
+	respuesta.WriteHeader(http.StatusNotFound)
+	json.NewEncoder(respuesta).Encode(map[string]string{"error": "Contratación no encontrada"})
 }
