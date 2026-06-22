@@ -10,18 +10,18 @@ type Asesor struct {
 }
 
 type Servicio struct {
-	IDServicio     int     `json:"id_servicio"`
+	IDservicio     int     `json:"id_servicio"`
 	Titulo         string  `json:"titulo"`
 	Descripcion    string  `json:"descripcion"`
 	Precio         float64 `json:"precio"`
 	Disponibilidad string  `json:"disponibilidad"`
-	IDAsesor       int     `json:"id_asesor"`
+	IDasesor       int     `json:"id_asesor"`
 }
 
 type Contratacion struct {
-	IDContratacion int    `json:"id_contratacion"`
+	IDcontratacion int    `json:"id_contratacion"`
 	Estudiante     string `json:"estudiante"`
 	Fecha          string `json:"fecha"`
 	Estado         string `json:"estado"` // "pendiente", "confirmada", "cancelada","completado"
-	IDServicio     int    `json:"id_servicio"`
+	IDservicio     int    `json:"id_servicio"`
 }
