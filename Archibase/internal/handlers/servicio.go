@@ -2,209 +2,134 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 
+	"github.com/go-chi/chi/v5"
+
 	"proyecto/internal/models"
 	"proyecto/internal/storage"
-
-	"github.com/go-chi/chi/v5"
 )
 
-// Obtener todos los servicios
-func ObtenerServicios(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
-	servicios := storage.GetAllServicios()
-
-	json.NewEncoder(w).Encode(servicios)
+type Servidor struct {
+	Almacen *storage.SQLiteStorage
 }
 
-// Obtener servicio por ID
-func ObtenerServicioPorID(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
-	id, err := strconv.Atoi(chi.URLParam(r, "id"))
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{
-			"error": "ID inválido",
-		})
-		return
-	}
-
-	servicio, err := storage.GetServicioByID(id)
-	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(map[string]string{
-			"error": "Servicio no encontrado",
-		})
-		return
-	}
-
-	json.NewEncoder(w).Encode(servicio)
+func NuevoServidor(a *storage.SQLiteStorage) *Servidor {
+	return &Servidor{Almacen: a}
 }
 
-// Crear servicio
-func CrearServicio(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
+func (s *Servidor) CrearServicio(respuesta http.ResponseWriter, peticion *http.Request) {
+	respuesta.Header().Set("Content-Type", "application/json")
 
 	var nuevoServicio models.Servicio
-
-	if err := json.NewDecoder(r.Body).Decode(&nuevoServicio); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{
-			"error": "Datos inválidos",
-		})
+	lector := json.NewDecoder(peticion.Body)
+	err := lector.Decode(&nuevoServicio)
+	if err != nil {
+		respuesta.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(respuesta).Encode(map[string]string{"error": "Datos invalidos"})
 		return
 	}
 
-	if nuevoServicio.Titulo == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{
-			"error": "El título es obligatorio",
-		})
+	if nuevoServicio.Nombre == "" {
+		respuesta.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(respuesta).Encode(map[string]string{"error": "El nombre es obligatorio"})
 		return
 	}
 
-	if nuevoServicio.Descripcion == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{
-			"error": "La descripción es obligatoria",
-		})
-		return
-	}
+	servicioCreado := s.Almacen.CrearServicio(nuevoServicio)
+	fmt.Println("--> Servicio creado con ID:", servicioCreado.ID)
 
-	if nuevoServicio.Disponibilidad == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{
-			"error": "La disponibilidad es obligatoria",
-		})
-		return
-	}
-
-	if nuevoServicio.IDasesor == 0 {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{
-			"error": "El ID del asesor es obligatorio",
-		})
-		return
-	}
-
-	if nuevoServicio.Precio < 0 {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{
-			"error": "El precio no puede ser negativo",
-		})
-		return
-	}
-
-	servicioCreado := storage.CreateServicio(nuevoServicio)
-
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(servicioCreado)
+	respuesta.WriteHeader(http.StatusCreated)
+	json.NewEncoder(respuesta).Encode(servicioCreado)
 }
 
-// Actualizar servicio
-func ActualizarServicio(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
+func (s *Servidor) ObtenerServicios(respuesta http.ResponseWriter, peticion *http.Request) {
+	respuesta.Header().Set("Content-Type", "application/json")
+	fmt.Println("--> Obteniendo todos los servicios")
+	json.NewEncoder(respuesta).Encode(s.Almacen.ListarServicios())
+}
 
-	id, err := strconv.Atoi(chi.URLParam(r, "id"))
+func (s *Servidor) ObtenerServicioPorID(respuesta http.ResponseWriter, peticion *http.Request) {
+	respuesta.Header().Set("Content-Type", "application/json")
+
+	idTexto := chi.URLParam(peticion, "id")
+	id, err := strconv.Atoi(idTexto)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{
-			"error": "ID inválido",
-		})
+		respuesta.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(respuesta).Encode(map[string]string{"error": "ID invalido"})
+		return
+	}
+
+	servicio, encontrada := s.Almacen.BuscarServicioPorID(id)
+	if !encontrada {
+		respuesta.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(respuesta).Encode(map[string]string{"error": "Servicio no encontrado"})
+		return
+	}
+
+	fmt.Println("--> Servicio encontrado con ID:", id)
+	json.NewEncoder(respuesta).Encode(servicio)
+}
+
+func (s *Servidor) ActualizarServicio(respuesta http.ResponseWriter, peticion *http.Request) {
+	respuesta.Header().Set("Content-Type", "application/json")
+
+	idTexto := chi.URLParam(peticion, "id")
+	id, err := strconv.Atoi(idTexto)
+	if err != nil {
+		respuesta.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(respuesta).Encode(map[string]string{"error": "ID invalido"})
 		return
 	}
 
 	var servicioActualizado models.Servicio
-
-	if err := json.NewDecoder(r.Body).Decode(&servicioActualizado); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{
-			"error": "Datos inválidos",
-		})
-		return
-	}
-
-	if servicioActualizado.Titulo == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{
-			"error": "El título es obligatorio",
-		})
-		return
-	}
-
-	if servicioActualizado.Descripcion == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{
-			"error": "La descripción es obligatoria",
-		})
-		return
-	}
-
-	if servicioActualizado.Disponibilidad == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{
-			"error": "La disponibilidad es obligatoria",
-		})
-		return
-	}
-
-	if servicioActualizado.IDasesor == 0 {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{
-			"error": "El ID del asesor es obligatorio",
-		})
-		return
-	}
-
-	if servicioActualizado.Precio < 0 {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{
-			"error": "El precio no puede ser negativo",
-		})
-		return
-	}
-
-	servicio, err := storage.UpdateServicio(id, servicioActualizado)
+	lector := json.NewDecoder(peticion.Body)
+	err = lector.Decode(&servicioActualizado)
 	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(map[string]string{
-			"error": "Servicio no encontrado",
-		})
+		respuesta.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(respuesta).Encode(map[string]string{"error": "Datos invalidos"})
 		return
 	}
 
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"mensaje":  "Servicio actualizado correctamente",
+	if servicioActualizado.Nombre == "" {
+		respuesta.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(respuesta).Encode(map[string]string{"error": "El nombre es obligatorio"})
+		return
+	}
+
+	servicio, encontrada := s.Almacen.ActualizarServicio(id, servicioActualizado)
+	if !encontrada {
+		respuesta.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(respuesta).Encode(map[string]string{"error": "Servicio no encontrado"})
+		return
+	}
+
+	fmt.Println("--> Servicio actualizado con ID:", id)
+	json.NewEncoder(respuesta).Encode(map[string]interface{}{
+		"mensaje":  "Servicio actualizado",
 		"servicio": servicio,
 	})
 }
 
-// Eliminar servicio
-func EliminarServicio(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
+func (s *Servidor) EliminarServicio(respuesta http.ResponseWriter, peticion *http.Request) {
+	respuesta.Header().Set("Content-Type", "application/json")
 
-	id, err := strconv.Atoi(chi.URLParam(r, "id"))
+	idTexto := chi.URLParam(peticion, "id")
+	id, err := strconv.Atoi(idTexto)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{
-			"error": "ID inválido",
-		})
+		respuesta.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(respuesta).Encode(map[string]string{"error": "ID invalido"})
 		return
 	}
 
-	if err := storage.DeleteServicio(id); err != nil {
-		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(map[string]string{
-			"error": "Servicio no encontrado",
-		})
+	if !s.Almacen.EliminarServicio(id) {
+		respuesta.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(respuesta).Encode(map[string]string{"error": "Servicio no encontrado"})
 		return
 	}
 
-	json.NewEncoder(w).Encode(map[string]string{
-		"mensaje": "Servicio eliminado correctamente",
-	})
+	fmt.Println("--> Servicio eliminado con ID:", id)
+	json.NewEncoder(respuesta).Encode(map[string]string{"mensaje": "Servicio eliminado correctamente"})
 }

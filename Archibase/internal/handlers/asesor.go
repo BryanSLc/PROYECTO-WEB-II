@@ -6,100 +6,130 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/go-chi/chi/v5"
+
 	"proyecto/internal/models"
 	"proyecto/internal/storage"
-
-	"github.com/go-chi/chi/v5"
 )
 
-func GetAllAsesores(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
+type Servidor struct {
+	Almacen *storage.SQLiteStorage
+}
+
+func NuevoServidor(a *storage.SQLiteStorage) *Servidor {
+	return &Servidor{Almacen: a}
+}
+
+func (s *Servidor) CrearAsesor(respuesta http.ResponseWriter, peticion *http.Request) {
+	respuesta.Header().Set("Content-Type", "application/json")
+
+	var nuevoAsesor models.Asesor
+	lector := json.NewDecoder(peticion.Body)
+	err := lector.Decode(&nuevoAsesor)
+	if err != nil {
+		respuesta.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(respuesta).Encode(map[string]string{"error": "Datos invalidos"})
+		return
+	}
+
+	if nuevoAsesor.Nombre == "" {
+		respuesta.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(respuesta).Encode(map[string]string{"error": "El nombre es obligatorio"})
+		return
+	}
+
+	asesorCreado := s.Almacen.CrearAsesor(nuevoAsesor)
+	fmt.Println("--> Asesor creado con ID:", asesorCreado.IDasesor)
+
+	respuesta.WriteHeader(http.StatusCreated)
+	json.NewEncoder(respuesta).Encode(asesorCreado)
+}
+
+func (s *Servidor) ObtenerAsesores(respuesta http.ResponseWriter, peticion *http.Request) {
+	respuesta.Header().Set("Content-Type", "application/json")
 	fmt.Println("--> Obteniendo todos los asesores")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(storage.GetAllAsesores())
+	json.NewEncoder(respuesta).Encode(s.Almacen.ListarAsesores())
 }
 
-func GetAsesorByID(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.Atoi(chi.URLParam(r, "id"))
+func (s *Servidor) ObtenerAsesorPorID(respuesta http.ResponseWriter, peticion *http.Request) {
+	respuesta.Header().Set("Content-Type", "application/json")
+
+	idTexto := chi.URLParam(peticion, "id")
+	id, err := strconv.Atoi(idTexto)
 	if err != nil {
-		fmt.Println("--> ID invalido")
-		http.Error(w, `{"error":"ID invalido"}`, http.StatusBadRequest)
+		respuesta.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(respuesta).Encode(map[string]string{"error": "ID invalido"})
 		return
 	}
-	asesor, err := storage.GetAsesorByID(id)
-	if err != nil {
-		fmt.Println("--> Asesor no encontrado con ID:", id)
-		http.Error(w, `{"error":"asesor no encontrado"}`, http.StatusNotFound)
+
+	asesor, encontrada := s.Almacen.BuscarAsesorPorID(id)
+	if !encontrada {
+		respuesta.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(respuesta).Encode(map[string]string{"error": "Asesor no encontrado"})
 		return
 	}
+
 	fmt.Println("--> Asesor encontrado con ID:", id)
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(asesor)
+	json.NewEncoder(respuesta).Encode(asesor)
 }
 
-func CreateAsesor(w http.ResponseWriter, r *http.Request) {
-	var a models.Asesor
-	if err := json.NewDecoder(r.Body).Decode(&a); err != nil {
-		fmt.Println("--> Body invalido")
-		http.Error(w, `{"error":"body invalido"}`, http.StatusBadRequest)
-		return
-	}
-	if a.Nombre == "" || a.Especialidad == "" || a.Contacto == "" || a.Modalidad == "" {
-		fmt.Println("--> Campos requeridos faltantes")
-		http.Error(w, `{"error":"nombre, especialidad, contacto y modalidad son requeridos"}`, http.StatusBadRequest)
-		return
-	}
-	fmt.Println("--> Asesor creado")
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(storage.CreateAsesor(a))
-}
+func (s *Servidor) ActualizarAsesor(respuesta http.ResponseWriter, peticion *http.Request) {
+	respuesta.Header().Set("Content-Type", "application/json")
 
-func UpdateAsesor(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.Atoi(chi.URLParam(r, "id"))
+	idTexto := chi.URLParam(peticion, "id")
+	id, err := strconv.Atoi(idTexto)
 	if err != nil {
-		fmt.Println("--> ID invalido")
-		http.Error(w, `{"error":"ID invalido"}`, http.StatusBadRequest)
+		respuesta.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(respuesta).Encode(map[string]string{"error": "ID invalido"})
 		return
 	}
-	var a models.Asesor
-	if err := json.NewDecoder(r.Body).Decode(&a); err != nil {
-		fmt.Println("--> Body invalido")
-		http.Error(w, `{"error":"body invalido"}`, http.StatusBadRequest)
-		return
-	}
-	if a.Nombre == "" || a.Especialidad == "" || a.Contacto == "" || a.Modalidad == "" {
-		fmt.Println("--> Campos requeridos faltantes")
-		http.Error(w, `{"error":"nombre, especialidad, contacto y modalidad son requeridos"}`, http.StatusBadRequest)
-		return
-	}
-	actualizado, err := storage.UpdateAsesor(id, a)
+
+	var asesorActualizado models.Asesor
+	lector := json.NewDecoder(peticion.Body)
+	err = lector.Decode(&asesorActualizado)
 	if err != nil {
-		fmt.Println("--> Asesor no encontrado con ID:", id)
-		http.Error(w, `{"error":"asesor no encontrado"}`, http.StatusNotFound)
+		respuesta.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(respuesta).Encode(map[string]string{"error": "Datos invalidos"})
 		return
 	}
+
+	if asesorActualizado.Nombre == "" {
+		respuesta.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(respuesta).Encode(map[string]string{"error": "El nombre es obligatorio"})
+		return
+	}
+
+	asesor, encontrada := s.Almacen.ActualizarAsesor(id, asesorActualizado)
+	if !encontrada {
+		respuesta.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(respuesta).Encode(map[string]string{"error": "Asesor no encontrado"})
+		return
+	}
+
 	fmt.Println("--> Asesor actualizado con ID:", id)
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(actualizado)
+	json.NewEncoder(respuesta).Encode(map[string]interface{}{
+		"mensaje": "Asesor actualizado",
+		"asesor":  asesor,
+	})
 }
 
-func DeleteAsesor(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.Atoi(chi.URLParam(r, "id"))
+func (s *Servidor) EliminarAsesor(respuesta http.ResponseWriter, peticion *http.Request) {
+	respuesta.Header().Set("Content-Type", "application/json")
+
+	idTexto := chi.URLParam(peticion, "id")
+	id, err := strconv.Atoi(idTexto)
 	if err != nil {
-		fmt.Println("--> ID invalido")
-		http.Error(w, `{"error":"ID invalido"}`, http.StatusBadRequest)
+		respuesta.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(respuesta).Encode(map[string]string{"error": "ID invalido"})
 		return
 	}
-	if err := storage.DeleteAsesor(id); err != nil {
-		fmt.Println("--> Asesor no encontrado con ID:", id)
-		http.Error(w, `{"error":"asesor no encontrado"}`, http.StatusNotFound)
+
+	if !s.Almacen.EliminarAsesor(id) {
+		respuesta.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(respuesta).Encode(map[string]string{"error": "Asesor no encontrado"})
 		return
 	}
+
 	fmt.Println("--> Asesor eliminado con ID:", id)
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"mensaje": "asesor eliminado"})
+	json.NewEncoder(respuesta).Encode(map[string]string{"mensaje": "Asesor eliminado correctamente"})
 }

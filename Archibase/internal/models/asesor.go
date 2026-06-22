@@ -6,9 +6,8 @@ type Asesor struct {
 	Especialidad string `json:"especialidad"`
 	Experiencia  string `json:"experiencia"`
 	Contacto     string `json:"contacto"`
-	Modalidad    string `json:"modalidad"` // "presencial", "virtual", "ambas"
+	Modalidad    string `json:"modalidad"`
 }
-
 type Servicio struct {
 	IDservicio     int     `json:"id_servicio"`
 	Titulo         string  `json:"titulo"`
