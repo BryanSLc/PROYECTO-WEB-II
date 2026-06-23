@@ -2,119 +2,109 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
+	"errors"
 	"net/http"
 	"strconv"
 
-	"github.com/go-chi/chi/v5"
-
 	"proyecto/internal/models"
+	"proyecto/internal/service"
+
+	"github.com/go-chi/chi/v5"
 )
 
-func (s *Servidor) CrearUsuario(respuesta http.ResponseWriter, peticion *http.Request) {
-	respuesta.Header().Set("Content-Type", "application/json")
+func (s *Servidor) CrearUsuario(w http.ResponseWriter, r *http.Request) {
 	var nuevoUsuario models.Usuario
-	lector := json.NewDecoder(peticion.Body)
-	err := lector.Decode(&nuevoUsuario)
-	if err != nil {
-		respuesta.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(respuesta).Encode(map[string]string{"error": "Datos invalidos"})
+	if err := json.NewDecoder(r.Body).Decode(&nuevoUsuario); err != nil {
+		RespondError(w, http.StatusBadRequest, "Datos invalidos")
 		return
 	}
-	if nuevoUsuario.Nombre == "" {
-		respuesta.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(respuesta).Encode(map[string]string{"error": "El nombre es obligatorio"})
-		return
-	}
-	if nuevoUsuario.Email == "" {
-		respuesta.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(respuesta).Encode(map[string]string{"error": "El correo electronico es obligatorio"})
-		return
-	}
-	usuarioCreado := s.Almacen.CrearUsuario(nuevoUsuario)
-	fmt.Println("--> Usuario creado con ID:", usuarioCreado.ID)
 
-	respuesta.WriteHeader(http.StatusCreated)
-	json.NewEncoder(respuesta).Encode(usuarioCreado)
+	// Delegamos la validación y creación completa al servicio de negocio
+	usuarioCreado, err := s.UsuarioService.Crear(nuevoUsuario)
+	if err != nil {
+		if errors.Is(err, service.ErrNombreObligatorio) || errors.Is(err, service.ErrEmailObligatorio) {
+			RespondError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		RespondError(w, http.StatusInternalServerError, "Error interno del servidor")
+		return
+	}
+
+	RespondJSON(w, http.StatusCreated, usuarioCreado)
 }
 
-func (s *Servidor) ObtenerUsuarios(respuesta http.ResponseWriter, peticion *http.Request) {
-	respuesta.Header().Set("Content-Type", "application/json")
-	fmt.Println("--> Obteniendo todos los usuarios")
-	json.NewEncoder(respuesta).Encode(s.Almacen.ListarUsuarios())
+func (s *Servidor) ObtenerUsuarios(w http.ResponseWriter, _ *http.Request) {
+	RespondJSON(w, http.StatusOK, s.UsuarioService.Listar())
 }
 
-func (s *Servidor) ObtenerUsuarioPorID(respuesta http.ResponseWriter, peticion *http.Request) {
-	respuesta.Header().Set("Content-Type", "application/json")
-	idTexto := chi.URLParam(peticion, "id")
-	id, err := strconv.Atoi(idTexto)
+func (s *Servidor) ObtenerUsuarioPorID(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(chi.URLParam(r, "id"))
 	if err != nil {
-		respuesta.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(respuesta).Encode(map[string]string{"error": "ID invalido"})
-		return
-	}
-	usuario, encontrado := s.Almacen.BuscarUsuarioPorID(id)
-	if !encontrado {
-		respuesta.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(respuesta).Encode(map[string]string{"error": "Usuario no encontrado"})
+		RespondError(w, http.StatusBadRequest, "ID invalido")
 		return
 	}
 
-	fmt.Println("--> Usuario encontrado con ID:", id)
-	json.NewEncoder(respuesta).Encode(usuario)
+	usuario, err := s.UsuarioService.BuscarPorID(id)
+	if err != nil {
+		if errors.Is(err, service.ErrUsuarioNoEncontrado) {
+			RespondError(w, http.StatusNotFound, err.Error())
+			return
+		}
+		RespondError(w, http.StatusInternalServerError, "Error interno del servidor")
+		return
+	}
+
+	RespondJSON(w, http.StatusOK, usuario)
 }
 
-func (s *Servidor) ActualizarUsuario(respuesta http.ResponseWriter, peticion *http.Request) {
-	respuesta.Header().Set("Content-Type", "application/json")
-	idTexto := chi.URLParam(peticion, "id")
-	id, err := strconv.Atoi(idTexto)
+func (s *Servidor) ActualizarUsuario(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(chi.URLParam(r, "id"))
 	if err != nil {
-		respuesta.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(respuesta).Encode(map[string]string{"error": "ID invalido"})
+		RespondError(w, http.StatusBadRequest, "ID invalido")
 		return
 	}
+
 	var usuarioActualizado models.Usuario
-	lector := json.NewDecoder(peticion.Body)
-	err = lector.Decode(&usuarioActualizado)
-	if err != nil {
-		respuesta.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(respuesta).Encode(map[string]string{"error": "Datos invalidos"})
+	if err := json.NewDecoder(r.Body).Decode(&usuarioActualizado); err != nil {
+		RespondError(w, http.StatusBadRequest, "Datos invalidos")
 		return
 	}
 
-	if usuarioActualizado.Nombre == "" {
-		respuesta.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(respuesta).Encode(map[string]string{"error": "El nombre es obligatorio"})
+	usuario, err := s.UsuarioService.Actualizar(id, usuarioActualizado)
+	if err != nil {
+		if errors.Is(err, service.ErrUsuarioNoEncontrado) {
+			RespondError(w, http.StatusNotFound, err.Error())
+			return
+		}
+		if errors.Is(err, service.ErrNombreObligatorio) {
+			RespondError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		RespondError(w, http.StatusInternalServerError, "Error interno del servidor")
 		return
 	}
-	usuario, encontrado := s.Almacen.ActualizarUsuario(id, usuarioActualizado)
-	if !encontrado {
-		respuesta.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(respuesta).Encode(map[string]string{"error": "Usuario no encontrado"})
-		return
-	}
-	fmt.Println("--> Usuario actualizado con ID:", id)
-	json.NewEncoder(respuesta).Encode(map[string]interface{}{
+
+	RespondJSON(w, http.StatusOK, map[string]any{
 		"mensaje": "Usuario actualizado correctamente",
 		"usuario": usuario,
 	})
 }
 
-func (s *Servidor) EliminarUsuario(respuesta http.ResponseWriter, peticion *http.Request) {
-	respuesta.Header().Set("Content-Type", "application/json")
-	idTexto := chi.URLParam(peticion, "id")
-	id, err := strconv.Atoi(idTexto)
+func (s *Servidor) EliminarUsuario(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(chi.URLParam(r, "id"))
 	if err != nil {
-		respuesta.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(respuesta).Encode(map[string]string{"error": "ID invalido"})
-		return
-	}
-	if !s.Almacen.EliminarUsuario(id) {
-		respuesta.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(respuesta).Encode(map[string]string{"error": "Usuario no encontrado"})
+		RespondError(w, http.StatusBadRequest, "ID invalido")
 		return
 	}
 
-	fmt.Println("--> Usuario eliminado con ID:", id)
-	json.NewEncoder(respuesta).Encode(map[string]string{"mensaje": "Usuario eliminado correctamente"})
+	if err := s.UsuarioService.Eliminar(id); err != nil {
+		if errors.Is(err, service.ErrUsuarioNoEncontrado) {
+			RespondError(w, http.StatusNotFound, err.Error())
+			return
+		}
+		RespondError(w, http.StatusInternalServerError, "Error interno del servidor")
+		return
+	}
+
+	RespondJSON(w, http.StatusOK, map[string]string{"mensaje": "Usuario eliminado correctamente"})
 }
