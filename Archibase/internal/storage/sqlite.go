@@ -28,6 +28,7 @@ func NuevoSQLiteStorage(pathDB string) *SQLiteStorage {
 		&models.EvolucionMaqueta{},
 		&models.Receta{},
 		&models.Proveedor{},
+		&models.MaterialProveedor{},
 	)
 	if err != nil {
 		log.Fatalf("Error al realizar la migración: %v", err)
@@ -79,6 +80,51 @@ func (s *SQLiteStorage) ActualizarProveedor(id int, datos models.Proveedor) (mod
 
 func (s *SQLiteStorage) EliminarProveedor(id int) bool {
 	resultado := s.db.Delete(&models.Proveedor{}, id)
+	return resultado.RowsAffected > 0
+}
+
+// ==========================================
+//     MÉTODOS PARA MATERIAL PROVEEDOR
+// ==========================================
+
+func (s *SQLiteStorage) CrearMaterial(material models.MaterialProveedor) models.MaterialProveedor {
+	s.db.Create(&material)
+	return material
+}
+
+func (s *SQLiteStorage) ListarMateriales() []models.MaterialProveedor {
+	var materiales []models.MaterialProveedor
+	s.db.Find(&materiales)
+	return materiales
+}
+
+func (s *SQLiteStorage) BuscarMaterialPorID(id int) (models.MaterialProveedor, bool) {
+	var material models.MaterialProveedor
+	err := s.db.First(&material, id).Error
+	if err != nil {
+		return models.MaterialProveedor{}, false
+	}
+	return material, true
+}
+
+func (s *SQLiteStorage) ActualizarMaterial(id int, datos models.MaterialProveedor) (models.MaterialProveedor, bool) {
+	var material models.MaterialProveedor
+	err := s.db.First(&material, id).Error
+	if err != nil {
+		return models.MaterialProveedor{}, false
+	}
+
+	material.Nombre = datos.Nombre
+	material.Categoria = datos.Categoria
+	material.PrecioReferencial = datos.PrecioReferencial
+	material.IDProveedor = datos.IDProveedor
+
+	s.db.Save(&material)
+	return material, true
+}
+
+func (s *SQLiteStorage) EliminarMaterial(id int) bool {
+	resultado := s.db.Delete(&models.MaterialProveedor{}, id)
 	return resultado.RowsAffected > 0
 }
 

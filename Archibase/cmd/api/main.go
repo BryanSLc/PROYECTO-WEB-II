@@ -117,11 +117,11 @@ func main() {
 		})
 
 		r.Route("/api/v1/materiales", func(r chi.Router) {
-			r.Post("/", handlers.CrearMaterial)
-			r.Get("/", handlers.ObtenerMateriales)
-			r.Get("/{id}", handlers.ObtenerMaterialPorID)
-			r.Put("/{id}", handlers.ActualizarMaterial)
-			r.Delete("/{id}", handlers.EliminarMaterial)
+			r.Post("/", servidor.CrearMaterial)
+			r.Get("/", servidor.ObtenerMateriales)
+			r.Get("/{id}", servidor.ObtenerMaterialPorID)
+			r.Put("/{id}", servidor.ActualizarMaterial)
+			r.Delete("/{id}", servidor.EliminarMaterial)
 		})
 	})
 
