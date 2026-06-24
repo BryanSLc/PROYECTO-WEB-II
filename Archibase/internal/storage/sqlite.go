@@ -27,12 +27,59 @@ func NuevoSQLiteStorage(pathDB string) *SQLiteStorage {
 		&models.Maqueta{},
 		&models.EvolucionMaqueta{},
 		&models.Receta{},
+		&models.Proveedor{},
 	)
 	if err != nil {
 		log.Fatalf("Error al realizar la migración: %v", err)
 	}
 
 	return &SQLiteStorage{db: db}
+}
+
+// ==========================================
+//          MÉTODOS PARA PROVEEDORES
+// ==========================================
+
+func (s *SQLiteStorage) CrearProveedor(proveedor models.Proveedor) models.Proveedor {
+	s.db.Create(&proveedor)
+	return proveedor
+}
+
+func (s *SQLiteStorage) ListarProveedores() []models.Proveedor {
+	var proveedores []models.Proveedor
+	s.db.Find(&proveedores)
+	return proveedores
+}
+
+func (s *SQLiteStorage) BuscarProveedorPorID(id int) (models.Proveedor, bool) {
+	var proveedor models.Proveedor
+	err := s.db.First(&proveedor, id).Error
+	if err != nil {
+		return models.Proveedor{}, false
+	}
+	return proveedor, true
+}
+
+func (s *SQLiteStorage) ActualizarProveedor(id int, datos models.Proveedor) (models.Proveedor, bool) {
+	var proveedor models.Proveedor
+	err := s.db.First(&proveedor, id).Error
+	if err != nil {
+		return models.Proveedor{}, false
+	}
+
+	proveedor.Nombre = datos.Nombre
+	proveedor.Ciudad = datos.Ciudad
+	proveedor.Provincia = datos.Provincia
+	proveedor.Direccion = datos.Direccion
+	proveedor.Telefono = datos.Telefono
+
+	s.db.Save(&proveedor)
+	return proveedor, true
+}
+
+func (s *SQLiteStorage) EliminarProveedor(id int) bool {
+	resultado := s.db.Delete(&models.Proveedor{}, id)
+	return resultado.RowsAffected > 0
 }
 
 // ==========================================

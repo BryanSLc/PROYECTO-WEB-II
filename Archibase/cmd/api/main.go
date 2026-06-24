@@ -73,14 +73,15 @@ func main() {
 			r.Delete("/{id}", servidor.EliminarReceta)
 		})
 
-		// --- MÓDULOS CON FUNCIONES GLOBALES (handlers.*) ---
+		// --- MÓDULOS CON FUNCIONES GLOBALES
 
+		// --- MÓDULO PROVEEDORES ---
 		r.Route("/api/v1/proveedores", func(r chi.Router) {
-			r.Post("/", handlers.CrearProveedor)
-			r.Get("/", handlers.ObtenerProveedores)
-			r.Get("/{id}", handlers.ObtenerProveedorPorID)
-			r.Put("/{id}", handlers.ActualizarProveedor)
-			r.Delete("/{id}", handlers.EliminarProveedor)
+			r.Post("/", servidor.CrearProveedor)
+			r.Get("/", servidor.ObtenerProveedores)
+			r.Get("/{id}", servidor.ObtenerProveedorPorID)
+			r.Put("/{id}", servidor.ActualizarProveedor)
+			r.Delete("/{id}", servidor.EliminarProveedor)
 		})
 
 		r.Route("/api/v1/asesores", func(r chi.Router) {
