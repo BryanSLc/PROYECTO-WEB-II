@@ -101,11 +101,11 @@ func main() {
 		})
 
 		r.Route("/api/v1/ubicaciones", func(r chi.Router) {
-			r.Post("/", handlers.CrearUbicacion)
-			r.Get("/", handlers.ObtenerUbicaciones)
-			r.Get("/{id}", handlers.ObtenerUbicacionPorID)
-			r.Put("/", handlers.ActualizarUbicacion)
-			r.Delete("/{id}", handlers.EliminarUbicacion)
+			r.Post("/", servidor.CrearUbicacion)
+			r.Get("/", servidor.ObtenerUbicaciones)
+			r.Get("/{id}", servidor.ObtenerUbicacionPorID)
+			r.Put("/", servidor.ActualizarUbicacion)
+			r.Delete("/{id}", servidor.EliminarUbicacion)
 		})
 
 		r.Route("/api/v1/servicios", func(r chi.Router) {
