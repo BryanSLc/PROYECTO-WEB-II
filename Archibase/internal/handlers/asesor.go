@@ -9,7 +9,6 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"proyecto/internal/models"
-	"proyecto/internal/storage"
 )
 
 func (s *Servidor) CrearAsesor(respuesta http.ResponseWriter, peticion *http.Request) {
@@ -17,32 +16,29 @@ func (s *Servidor) CrearAsesor(respuesta http.ResponseWriter, peticion *http.Req
 
 	var nuevoAsesor models.Asesor
 	lector := json.NewDecoder(peticion.Body)
-	err := lector.Decode(&nuevoAsesor)
-	if err != nil {
+	if err := lector.Decode(&nuevoAsesor); err != nil {
 		respuesta.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(respuesta).Encode(map[string]string{"error": "Datos invalidos"})
 		return
 	}
 
-	if nuevoAsesor.Nombre == "" {
-		respuesta.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(respuesta).Encode(map[string]string{"error": "El nombre es obligatorio"})
+	asesorCreado, svcErr := s.AsesorSvc.Crear(nuevoAsesor)
+	if svcErr != nil {
+		responderError(respuesta, svcErr)
 		return
 	}
 
-	nuevoAsesor.IDasesor = storage.ConteoAsesores
-	storage.ConteoAsesores++
-	storage.ListaAsesores = append(storage.ListaAsesores, nuevoAsesor)
-
-	fmt.Println("--> Asesor creado con ID:", nuevoAsesor.IDasesor)
+	fmt.Println("--> Asesor creado con ID:", asesorCreado.IDasesor)
 	respuesta.WriteHeader(http.StatusCreated)
-	json.NewEncoder(respuesta).Encode(nuevoAsesor)
+	json.NewEncoder(respuesta).Encode(asesorCreado)
 }
 
 func (s *Servidor) ObtenerAsesores(respuesta http.ResponseWriter, peticion *http.Request) {
 	respuesta.Header().Set("Content-Type", "application/json")
 	fmt.Println("--> Obteniendo todos los asesores")
-	json.NewEncoder(respuesta).Encode(storage.ListaAsesores)
+	asesores, svcErr := s.AsesorSvc.Listar(), error(nil)
+	_ = svcErr
+	json.NewEncoder(respuesta).Encode(asesores)
 }
 
 func (s *Servidor) ObtenerAsesorPorID(respuesta http.ResponseWriter, peticion *http.Request) {
@@ -56,16 +52,14 @@ func (s *Servidor) ObtenerAsesorPorID(respuesta http.ResponseWriter, peticion *h
 		return
 	}
 
-	for _, asesor := range storage.ListaAsesores {
-		if asesor.IDasesor == id {
-			fmt.Println("--> Asesor encontrado con ID:", id)
-			json.NewEncoder(respuesta).Encode(asesor)
-			return
-		}
+	asesor, svcErr := s.AsesorSvc.BuscarPorID(id)
+	if svcErr != nil {
+		responderError(respuesta, svcErr)
+		return
 	}
 
-	respuesta.WriteHeader(http.StatusNotFound)
-	json.NewEncoder(respuesta).Encode(map[string]string{"error": "Asesor no encontrado"})
+	fmt.Println("--> Asesor encontrado con ID:", id)
+	json.NewEncoder(respuesta).Encode(asesor)
 }
 
 func (s *Servidor) ActualizarAsesor(respuesta http.ResponseWriter, peticion *http.Request) {
@@ -95,20 +89,17 @@ func (s *Servidor) ActualizarAsesor(respuesta http.ResponseWriter, peticion *htt
 	}
 
 	asesorActualizado.IDasesor = id
-	for i, asesor := range storage.ListaAsesores {
-		if asesor.IDasesor == id {
-			storage.ListaAsesores[i] = asesorActualizado
-			fmt.Println("--> Asesor actualizado con ID:", id)
-			json.NewEncoder(respuesta).Encode(map[string]interface{}{
-				"mensaje": "Asesor actualizado",
-				"asesor":  asesorActualizado,
-			})
-			return
-		}
+	asesor, svcErr := s.AsesorSvc.Actualizar(id, asesorActualizado)
+	if svcErr != nil {
+		responderError(respuesta, svcErr)
+		return
 	}
 
-	respuesta.WriteHeader(http.StatusNotFound)
-	json.NewEncoder(respuesta).Encode(map[string]string{"error": "Asesor no encontrado"})
+	fmt.Println("--> Asesor actualizado con ID:", id)
+	json.NewEncoder(respuesta).Encode(map[string]interface{}{
+		"mensaje": "Asesor actualizado",
+		"asesor":  asesor,
+	})
 }
 
 func (s *Servidor) EliminarAsesor(respuesta http.ResponseWriter, peticion *http.Request) {
@@ -122,15 +113,11 @@ func (s *Servidor) EliminarAsesor(respuesta http.ResponseWriter, peticion *http.
 		return
 	}
 
-	for i, asesor := range storage.ListaAsesores {
-		if asesor.IDasesor == id {
-			storage.ListaAsesores = append(storage.ListaAsesores[:i], storage.ListaAsesores[i+1:]...)
-			fmt.Println("--> Asesor eliminado con ID:", id)
-			json.NewEncoder(respuesta).Encode(map[string]string{"mensaje": "Asesor eliminado correctamente"})
-			return
-		}
+	if svcErr := s.AsesorSvc.Eliminar(id); svcErr != nil {
+		responderError(respuesta, svcErr)
+		return
 	}
 
-	respuesta.WriteHeader(http.StatusNotFound)
-	json.NewEncoder(respuesta).Encode(map[string]string{"error": "Asesor no encontrado"})
+	fmt.Println("--> Asesor eliminado con ID:", id)
+	json.NewEncoder(respuesta).Encode(map[string]string{"mensaje": "Asesor eliminado correctamente"})
 }

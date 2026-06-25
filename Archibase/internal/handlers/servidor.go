@@ -10,16 +10,20 @@ import (
 )
 
 type Servidor struct {
-	UsuarioSvc *service.UsuarioService
-	MaquetaSvc *service.MaquetaService
-	RecetaSvc  *service.RecetaService
+	UsuarioSvc      *service.UsuarioService
+	MaquetaSvc      *service.MaquetaService
+	RecetaSvc       *service.RecetaService
+	ContratacionSvc *service.ContratacionService
+	AsesorSvc       *service.AsesorService
 }
 
 func NuevoServidor(a *storage.SQLiteStorage) *Servidor {
 	return &Servidor{
-		UsuarioSvc: service.NuevoUsuarioService(a),
-		MaquetaSvc: service.NuevoMaquetaService(a),
-		RecetaSvc:  service.NuevoRecetaService(a),
+		UsuarioSvc:      service.NuevoUsuarioService(a),
+		MaquetaSvc:      service.NuevoMaquetaService(a),
+		RecetaSvc:       service.NuevoRecetaService(a),
+		ContratacionSvc: service.NuevoContratacionService(a),
+		AsesorSvc:       service.NuevoAsesorService(a),
 	}
 }
 

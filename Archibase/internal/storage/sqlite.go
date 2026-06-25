@@ -27,7 +27,14 @@ func NuevoSQLiteStorage(pathDB string) *SQLiteStorage {
 		&models.Maqueta{},
 		&models.EvolucionMaqueta{},
 		&models.Receta{},
+		&models.Asesor{},
+		&models.Servicio{},
+		&models.Contratacion{},
+		&models.Proveedor{},
+		&models.MaterialProveedor{},
+		&models.Ubicacion{},
 	)
+
 	if err != nil {
 		log.Fatalf("Error al realizar la migración: %v", err)
 	}
@@ -202,5 +209,49 @@ func (s *SQLiteStorage) ActualizarReceta(id int, datos models.Receta) (models.Re
 
 func (s *SQLiteStorage) EliminarReceta(id int) bool {
 	resultado := s.db.Delete(&models.Receta{}, id)
+	return resultado.RowsAffected > 0
+}
+
+// ==========================================
+//          MÉTODOS PARA SERVICIOS
+// ==========================================
+
+func (s *SQLiteStorage) CrearServicio(servicio models.Servicio) models.Servicio {
+	s.db.Create(&servicio)
+	return servicio
+}
+
+func (s *SQLiteStorage) ListarServicios() []models.Servicio {
+	var items []models.Servicio
+	s.db.Find(&items)
+	return items
+}
+
+func (s *SQLiteStorage) BuscarServicioPorID(id int) (models.Servicio, bool) {
+	var item models.Servicio
+	if err := s.db.First(&item, id).Error; err != nil {
+		return models.Servicio{}, false
+	}
+	return item, true
+}
+
+func (s *SQLiteStorage) ActualizarServicio(id int, datos models.Servicio) (models.Servicio, bool) {
+	var item models.Servicio
+	if err := s.db.First(&item, id).Error; err != nil {
+		return models.Servicio{}, false
+	}
+
+	item.Titulo = datos.Titulo
+	item.Descripcion = datos.Descripcion
+	item.Precio = datos.Precio
+	item.Disponibilidad = datos.Disponibilidad
+	item.IDasesor = datos.IDasesor
+
+	s.db.Save(&item)
+	return item, true
+}
+
+func (s *SQLiteStorage) EliminarServicio(id int) bool {
+	resultado := s.db.Delete(&models.Servicio{}, id)
 	return resultado.RowsAffected > 0
 }
