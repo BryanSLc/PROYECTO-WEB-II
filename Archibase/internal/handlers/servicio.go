@@ -12,124 +12,95 @@ import (
 	"proyecto/internal/storage"
 )
 
-type Servidor struct {
-	Almacen *storage.SQLiteStorage
-}
-
-func NuevoServidor(a *storage.SQLiteStorage) *Servidor {
-	return &Servidor{Almacen: a}
-}
-
-func (s *Servidor) CrearServicio(respuesta http.ResponseWriter, peticion *http.Request) {
-	respuesta.Header().Set("Content-Type", "application/json")
+func (s *Servidor) CrearServicio(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 
 	var nuevoServicio models.Servicio
-	lector := json.NewDecoder(peticion.Body)
-	err := lector.Decode(&nuevoServicio)
-	if err != nil {
-		respuesta.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(respuesta).Encode(map[string]string{"error": "Datos invalidos"})
+	if err := json.NewDecoder(r.Body).Decode(&nuevoServicio); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	if nuevoServicio.Nombre == "" {
-		respuesta.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(respuesta).Encode(map[string]string{"error": "El nombre es obligatorio"})
-		return
-	}
+	nuevoServicio.IDservicio = storage.ConteoServicios
+	storage.ConteoServicios++
+	storage.ListaServicios = append(storage.ListaServicios, nuevoServicio)
 
-	servicioCreado := s.Almacen.CrearServicio(nuevoServicio)
-	fmt.Println("--> Servicio creado con ID:", servicioCreado.ID)
-
-	respuesta.WriteHeader(http.StatusCreated)
-	json.NewEncoder(respuesta).Encode(servicioCreado)
+	fmt.Println("--> Servicio creado con ID:", nuevoServicio.IDservicio)
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(nuevoServicio)
 }
 
-func (s *Servidor) ObtenerServicios(respuesta http.ResponseWriter, peticion *http.Request) {
-	respuesta.Header().Set("Content-Type", "application/json")
+func (s *Servidor) ObtenerServicios(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 	fmt.Println("--> Obteniendo todos los servicios")
-	json.NewEncoder(respuesta).Encode(s.Almacen.ListarServicios())
+	json.NewEncoder(w).Encode(storage.ListaServicios)
 }
 
-func (s *Servidor) ObtenerServicioPorID(respuesta http.ResponseWriter, peticion *http.Request) {
-	respuesta.Header().Set("Content-Type", "application/json")
-
-	idTexto := chi.URLParam(peticion, "id")
+func (s *Servidor) ObtenerServicioPorID(w http.ResponseWriter, r *http.Request) {
+	idTexto := chi.URLParam(r, "id")
 	id, err := strconv.Atoi(idTexto)
 	if err != nil {
-		respuesta.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(respuesta).Encode(map[string]string{"error": "ID invalido"})
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	servicio, encontrada := s.Almacen.BuscarServicioPorID(id)
-	if !encontrada {
-		respuesta.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(respuesta).Encode(map[string]string{"error": "Servicio no encontrado"})
-		return
+	for _, servicio := range storage.ListaServicios {
+		if servicio.IDservicio == id {
+			fmt.Println("--> Servicio encontrado con ID:", id)
+			json.NewEncoder(w).Encode(servicio)
+			return
+		}
 	}
 
-	fmt.Println("--> Servicio encontrado con ID:", id)
-	json.NewEncoder(respuesta).Encode(servicio)
+	fmt.Println("--> Servicio no encontrado con ID:", id)
+	w.WriteHeader(http.StatusNotFound)
 }
 
-func (s *Servidor) ActualizarServicio(respuesta http.ResponseWriter, peticion *http.Request) {
-	respuesta.Header().Set("Content-Type", "application/json")
-
-	idTexto := chi.URLParam(peticion, "id")
+func (s *Servidor) ActualizarServicio(w http.ResponseWriter, r *http.Request) {
+	idTexto := chi.URLParam(r, "id")
 	id, err := strconv.Atoi(idTexto)
 	if err != nil {
-		respuesta.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(respuesta).Encode(map[string]string{"error": "ID invalido"})
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	var servicioActualizado models.Servicio
-	lector := json.NewDecoder(peticion.Body)
-	err = lector.Decode(&servicioActualizado)
-	if err != nil {
-		respuesta.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(respuesta).Encode(map[string]string{"error": "Datos invalidos"})
+	if err := json.NewDecoder(r.Body).Decode(&servicioActualizado); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	servicioActualizado.IDservicio = id
 
-	if servicioActualizado.Nombre == "" {
-		respuesta.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(respuesta).Encode(map[string]string{"error": "El nombre es obligatorio"})
-		return
+	for i, servicio := range storage.ListaServicios {
+		if servicio.IDservicio == id {
+			storage.ListaServicios[i] = servicioActualizado
+			fmt.Println("--> Servicio actualizado con ID:", id)
+			json.NewEncoder(w).Encode(servicioActualizado)
+			return
+		}
 	}
 
-	servicio, encontrada := s.Almacen.ActualizarServicio(id, servicioActualizado)
-	if !encontrada {
-		respuesta.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(respuesta).Encode(map[string]string{"error": "Servicio no encontrado"})
-		return
-	}
-
-	fmt.Println("--> Servicio actualizado con ID:", id)
-	json.NewEncoder(respuesta).Encode(map[string]interface{}{
-		"mensaje":  "Servicio actualizado",
-		"servicio": servicio,
-	})
+	fmt.Println("--> Servicio no encontrado con ID:", id)
+	w.WriteHeader(http.StatusNotFound)
 }
 
-func (s *Servidor) EliminarServicio(respuesta http.ResponseWriter, peticion *http.Request) {
-	respuesta.Header().Set("Content-Type", "application/json")
-
-	idTexto := chi.URLParam(peticion, "id")
+func (s *Servidor) EliminarServicio(w http.ResponseWriter, r *http.Request) {
+	idTexto := chi.URLParam(r, "id")
 	id, err := strconv.Atoi(idTexto)
 	if err != nil {
-		respuesta.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(respuesta).Encode(map[string]string{"error": "ID invalido"})
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	if !s.Almacen.EliminarServicio(id) {
-		respuesta.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(respuesta).Encode(map[string]string{"error": "Servicio no encontrado"})
-		return
+	for i, servicio := range storage.ListaServicios {
+		if servicio.IDservicio == id {
+			storage.ListaServicios = append(storage.ListaServicios[:i], storage.ListaServicios[i+1:]...)
+			fmt.Println("--> Servicio eliminado con ID:", id)
+			w.WriteHeader(http.StatusOK)
+			return
+		}
 	}
 
-	fmt.Println("--> Servicio eliminado con ID:", id)
-	json.NewEncoder(respuesta).Encode(map[string]string{"mensaje": "Servicio eliminado correctamente"})
+	fmt.Println("--> Servicio no encontrado con ID:", id)
+	w.WriteHeader(http.StatusNotFound)
 }

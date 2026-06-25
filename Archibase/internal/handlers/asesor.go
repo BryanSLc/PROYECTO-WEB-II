@@ -12,14 +12,6 @@ import (
 	"proyecto/internal/storage"
 )
 
-type Servidor struct {
-	Almacen *storage.SQLiteStorage
-}
-
-func NuevoServidor(a *storage.SQLiteStorage) *Servidor {
-	return &Servidor{Almacen: a}
-}
-
 func (s *Servidor) CrearAsesor(respuesta http.ResponseWriter, peticion *http.Request) {
 	respuesta.Header().Set("Content-Type", "application/json")
 
@@ -38,17 +30,19 @@ func (s *Servidor) CrearAsesor(respuesta http.ResponseWriter, peticion *http.Req
 		return
 	}
 
-	asesorCreado := s.Almacen.CrearAsesor(nuevoAsesor)
-	fmt.Println("--> Asesor creado con ID:", asesorCreado.IDasesor)
+	nuevoAsesor.IDasesor = storage.ConteoAsesores
+	storage.ConteoAsesores++
+	storage.ListaAsesores = append(storage.ListaAsesores, nuevoAsesor)
 
+	fmt.Println("--> Asesor creado con ID:", nuevoAsesor.IDasesor)
 	respuesta.WriteHeader(http.StatusCreated)
-	json.NewEncoder(respuesta).Encode(asesorCreado)
+	json.NewEncoder(respuesta).Encode(nuevoAsesor)
 }
 
 func (s *Servidor) ObtenerAsesores(respuesta http.ResponseWriter, peticion *http.Request) {
 	respuesta.Header().Set("Content-Type", "application/json")
 	fmt.Println("--> Obteniendo todos los asesores")
-	json.NewEncoder(respuesta).Encode(s.Almacen.ListarAsesores())
+	json.NewEncoder(respuesta).Encode(storage.ListaAsesores)
 }
 
 func (s *Servidor) ObtenerAsesorPorID(respuesta http.ResponseWriter, peticion *http.Request) {
@@ -62,15 +56,16 @@ func (s *Servidor) ObtenerAsesorPorID(respuesta http.ResponseWriter, peticion *h
 		return
 	}
 
-	asesor, encontrada := s.Almacen.BuscarAsesorPorID(id)
-	if !encontrada {
-		respuesta.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(respuesta).Encode(map[string]string{"error": "Asesor no encontrado"})
-		return
+	for _, asesor := range storage.ListaAsesores {
+		if asesor.IDasesor == id {
+			fmt.Println("--> Asesor encontrado con ID:", id)
+			json.NewEncoder(respuesta).Encode(asesor)
+			return
+		}
 	}
 
-	fmt.Println("--> Asesor encontrado con ID:", id)
-	json.NewEncoder(respuesta).Encode(asesor)
+	respuesta.WriteHeader(http.StatusNotFound)
+	json.NewEncoder(respuesta).Encode(map[string]string{"error": "Asesor no encontrado"})
 }
 
 func (s *Servidor) ActualizarAsesor(respuesta http.ResponseWriter, peticion *http.Request) {
@@ -99,18 +94,21 @@ func (s *Servidor) ActualizarAsesor(respuesta http.ResponseWriter, peticion *htt
 		return
 	}
 
-	asesor, encontrada := s.Almacen.ActualizarAsesor(id, asesorActualizado)
-	if !encontrada {
-		respuesta.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(respuesta).Encode(map[string]string{"error": "Asesor no encontrado"})
-		return
+	asesorActualizado.IDasesor = id
+	for i, asesor := range storage.ListaAsesores {
+		if asesor.IDasesor == id {
+			storage.ListaAsesores[i] = asesorActualizado
+			fmt.Println("--> Asesor actualizado con ID:", id)
+			json.NewEncoder(respuesta).Encode(map[string]interface{}{
+				"mensaje": "Asesor actualizado",
+				"asesor":  asesorActualizado,
+			})
+			return
+		}
 	}
 
-	fmt.Println("--> Asesor actualizado con ID:", id)
-	json.NewEncoder(respuesta).Encode(map[string]interface{}{
-		"mensaje": "Asesor actualizado",
-		"asesor":  asesor,
-	})
+	respuesta.WriteHeader(http.StatusNotFound)
+	json.NewEncoder(respuesta).Encode(map[string]string{"error": "Asesor no encontrado"})
 }
 
 func (s *Servidor) EliminarAsesor(respuesta http.ResponseWriter, peticion *http.Request) {
@@ -124,12 +122,15 @@ func (s *Servidor) EliminarAsesor(respuesta http.ResponseWriter, peticion *http.
 		return
 	}
 
-	if !s.Almacen.EliminarAsesor(id) {
-		respuesta.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(respuesta).Encode(map[string]string{"error": "Asesor no encontrado"})
-		return
+	for i, asesor := range storage.ListaAsesores {
+		if asesor.IDasesor == id {
+			storage.ListaAsesores = append(storage.ListaAsesores[:i], storage.ListaAsesores[i+1:]...)
+			fmt.Println("--> Asesor eliminado con ID:", id)
+			json.NewEncoder(respuesta).Encode(map[string]string{"mensaje": "Asesor eliminado correctamente"})
+			return
+		}
 	}
 
-	fmt.Println("--> Asesor eliminado con ID:", id)
-	json.NewEncoder(respuesta).Encode(map[string]string{"mensaje": "Asesor eliminado correctamente"})
+	respuesta.WriteHeader(http.StatusNotFound)
+	json.NewEncoder(respuesta).Encode(map[string]string{"error": "Asesor no encontrado"})
 }

@@ -13,14 +13,15 @@ import (
 
 func (s *Servidor) CrearUsuario(respuesta http.ResponseWriter, peticion *http.Request) {
 	respuesta.Header().Set("Content-Type", "application/json")
+
 	var nuevoUsuario models.Usuario
 	lector := json.NewDecoder(peticion.Body)
-	err := lector.Decode(&nuevoUsuario)
-	if err != nil {
+	if err := lector.Decode(&nuevoUsuario); err != nil {
 		respuesta.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(respuesta).Encode(map[string]string{"error": "Datos invalidos"})
 		return
 	}
+
 	if nuevoUsuario.Nombre == "" {
 		respuesta.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(respuesta).Encode(map[string]string{"error": "El nombre es obligatorio"})
@@ -31,9 +32,14 @@ func (s *Servidor) CrearUsuario(respuesta http.ResponseWriter, peticion *http.Re
 		json.NewEncoder(respuesta).Encode(map[string]string{"error": "El correo electronico es obligatorio"})
 		return
 	}
-	usuarioCreado := s.Almacen.CrearUsuario(nuevoUsuario)
-	fmt.Println("--> Usuario creado con ID:", usuarioCreado.ID)
 
+	usuarioCreado, svcErr := s.UsuarioSvc.Crear(nuevoUsuario)
+	if svcErr != nil {
+		responderError(respuesta, svcErr)
+		return
+	}
+
+	fmt.Println("--> Usuario creado con ID:", usuarioCreado.ID)
 	respuesta.WriteHeader(http.StatusCreated)
 	json.NewEncoder(respuesta).Encode(usuarioCreado)
 }
@@ -41,11 +47,12 @@ func (s *Servidor) CrearUsuario(respuesta http.ResponseWriter, peticion *http.Re
 func (s *Servidor) ObtenerUsuarios(respuesta http.ResponseWriter, peticion *http.Request) {
 	respuesta.Header().Set("Content-Type", "application/json")
 	fmt.Println("--> Obteniendo todos los usuarios")
-	json.NewEncoder(respuesta).Encode(s.Almacen.ListarUsuarios())
+	json.NewEncoder(respuesta).Encode(s.UsuarioSvc.Listar())
 }
 
 func (s *Servidor) ObtenerUsuarioPorID(respuesta http.ResponseWriter, peticion *http.Request) {
 	respuesta.Header().Set("Content-Type", "application/json")
+
 	idTexto := chi.URLParam(peticion, "id")
 	id, err := strconv.Atoi(idTexto)
 	if err != nil {
@@ -53,10 +60,10 @@ func (s *Servidor) ObtenerUsuarioPorID(respuesta http.ResponseWriter, peticion *
 		json.NewEncoder(respuesta).Encode(map[string]string{"error": "ID invalido"})
 		return
 	}
-	usuario, encontrado := s.Almacen.BuscarUsuarioPorID(id)
-	if !encontrado {
-		respuesta.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(respuesta).Encode(map[string]string{"error": "Usuario no encontrado"})
+
+	usuario, svcErr := s.UsuarioSvc.BuscarPorID(id)
+	if svcErr != nil {
+		responderError(respuesta, svcErr)
 		return
 	}
 
@@ -66,6 +73,7 @@ func (s *Servidor) ObtenerUsuarioPorID(respuesta http.ResponseWriter, peticion *
 
 func (s *Servidor) ActualizarUsuario(respuesta http.ResponseWriter, peticion *http.Request) {
 	respuesta.Header().Set("Content-Type", "application/json")
+
 	idTexto := chi.URLParam(peticion, "id")
 	id, err := strconv.Atoi(idTexto)
 	if err != nil {
@@ -73,10 +81,10 @@ func (s *Servidor) ActualizarUsuario(respuesta http.ResponseWriter, peticion *ht
 		json.NewEncoder(respuesta).Encode(map[string]string{"error": "ID invalido"})
 		return
 	}
+
 	var usuarioActualizado models.Usuario
 	lector := json.NewDecoder(peticion.Body)
-	err = lector.Decode(&usuarioActualizado)
-	if err != nil {
+	if err := lector.Decode(&usuarioActualizado); err != nil {
 		respuesta.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(respuesta).Encode(map[string]string{"error": "Datos invalidos"})
 		return
@@ -87,12 +95,13 @@ func (s *Servidor) ActualizarUsuario(respuesta http.ResponseWriter, peticion *ht
 		json.NewEncoder(respuesta).Encode(map[string]string{"error": "El nombre es obligatorio"})
 		return
 	}
-	usuario, encontrado := s.Almacen.ActualizarUsuario(id, usuarioActualizado)
-	if !encontrado {
-		respuesta.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(respuesta).Encode(map[string]string{"error": "Usuario no encontrado"})
+
+	usuario, svcErr := s.UsuarioSvc.Actualizar(id, usuarioActualizado)
+	if svcErr != nil {
+		responderError(respuesta, svcErr)
 		return
 	}
+
 	fmt.Println("--> Usuario actualizado con ID:", id)
 	json.NewEncoder(respuesta).Encode(map[string]interface{}{
 		"mensaje": "Usuario actualizado correctamente",
@@ -102,6 +111,7 @@ func (s *Servidor) ActualizarUsuario(respuesta http.ResponseWriter, peticion *ht
 
 func (s *Servidor) EliminarUsuario(respuesta http.ResponseWriter, peticion *http.Request) {
 	respuesta.Header().Set("Content-Type", "application/json")
+
 	idTexto := chi.URLParam(peticion, "id")
 	id, err := strconv.Atoi(idTexto)
 	if err != nil {
@@ -109,9 +119,9 @@ func (s *Servidor) EliminarUsuario(respuesta http.ResponseWriter, peticion *http
 		json.NewEncoder(respuesta).Encode(map[string]string{"error": "ID invalido"})
 		return
 	}
-	if !s.Almacen.EliminarUsuario(id) {
-		respuesta.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(respuesta).Encode(map[string]string{"error": "Usuario no encontrado"})
+
+	if svcErr := s.UsuarioSvc.Eliminar(id); svcErr != nil {
+		responderError(respuesta, svcErr)
 		return
 	}
 

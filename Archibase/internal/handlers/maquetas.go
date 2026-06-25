@@ -9,16 +9,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"proyecto/internal/models"
-	"proyecto/internal/storage"
 )
-
-type Servidor struct {
-	Almacen *storage.SQLiteStorage
-}
-
-func NuevoServidor(a *storage.SQLiteStorage) *Servidor {
-	return &Servidor{Almacen: a}
-}
 
 func (s *Servidor) CrearMaqueta(respuesta http.ResponseWriter, peticion *http.Request) {
 	respuesta.Header().Set("Content-Type", "application/json")
@@ -30,12 +21,13 @@ func (s *Servidor) CrearMaqueta(respuesta http.ResponseWriter, peticion *http.Re
 		json.NewEncoder(respuesta).Encode(map[string]string{"error": "Datos invalidos"})
 		return
 	}
-	if nuevaMaqueta.Titulo == "" {
-		respuesta.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(respuesta).Encode(map[string]string{"error": "El titulo es obligatorio"})
+
+	maquetaCreada, svcErr := s.MaquetaSvc.Crear(nuevaMaqueta)
+	if svcErr != nil {
+		responderError(respuesta, svcErr)
 		return
 	}
-	maquetaCreada := s.Almacen.CrearMaqueta(nuevaMaqueta)
+
 	fmt.Println("--> Maqueta creada con ID:", maquetaCreada.ID)
 	respuesta.WriteHeader(http.StatusCreated)
 	json.NewEncoder(respuesta).Encode(maquetaCreada)
@@ -44,7 +36,7 @@ func (s *Servidor) CrearMaqueta(respuesta http.ResponseWriter, peticion *http.Re
 func (s *Servidor) ObtenerMaquetas(respuesta http.ResponseWriter, peticion *http.Request) {
 	respuesta.Header().Set("Content-Type", "application/json")
 	fmt.Println("--> Obteniendo todas las maquetas")
-	json.NewEncoder(respuesta).Encode(s.Almacen.ListarMaquetas())
+	json.NewEncoder(respuesta).Encode(s.MaquetaSvc.Listar())
 }
 
 func (s *Servidor) ObtenerMaquetaPorID(respuesta http.ResponseWriter, peticion *http.Request) {
@@ -57,10 +49,10 @@ func (s *Servidor) ObtenerMaquetaPorID(respuesta http.ResponseWriter, peticion *
 		json.NewEncoder(respuesta).Encode(map[string]string{"error": "ID invalido"})
 		return
 	}
-	maqueta, encontrada := s.Almacen.BuscarMaquetaPorID(id)
-	if !encontrada {
-		respuesta.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(respuesta).Encode(map[string]string{"error": "Maqueta no encontrada"})
+
+	maqueta, svcErr := s.MaquetaSvc.BuscarPorID(id)
+	if svcErr != nil {
+		responderError(respuesta, svcErr)
 		return
 	}
 
@@ -88,16 +80,9 @@ func (s *Servidor) ActualizarMaqueta(respuesta http.ResponseWriter, peticion *ht
 		return
 	}
 
-	if maquetaActualizada.Titulo == "" {
-		respuesta.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(respuesta).Encode(map[string]string{"error": "El titulo es obligatorio"})
-		return
-	}
-
-	maqueta, encontrada := s.Almacen.ActualizarMaqueta(id, maquetaActualizada)
-	if !encontrada {
-		respuesta.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(respuesta).Encode(map[string]string{"error": "Maqueta no encontrada"})
+	maqueta, svcErr := s.MaquetaSvc.Actualizar(id, maquetaActualizada)
+	if svcErr != nil {
+		responderError(respuesta, svcErr)
 		return
 	}
 
@@ -119,9 +104,9 @@ func (s *Servidor) EliminarMaqueta(respuesta http.ResponseWriter, peticion *http
 		return
 	}
 
-	if !s.Almacen.EliminarMaqueta(id) {
-		respuesta.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(respuesta).Encode(map[string]string{"error": "Maqueta no encontrada"})
+	svcErr := s.MaquetaSvc.Eliminar(id)
+	if svcErr != nil {
+		responderError(respuesta, svcErr)
 		return
 	}
 
@@ -139,28 +124,13 @@ func (s *Servidor) AgregarEvolucionMaqueta(respuesta http.ResponseWriter, petici
 		json.NewEncoder(respuesta).Encode(map[string]string{"error": "Datos invalidos"})
 		return
 	}
-	if nuevaEvolucion.MaquetaID == 0 {
-		respuesta.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(respuesta).Encode(map[string]string{"error": "El ID de la maqueta es obligatorio"})
+
+	evolucionCreada, svcErr := s.MaquetaSvc.AgregarEvolucion(nuevaEvolucion)
+	if svcErr != nil {
+		responderError(respuesta, svcErr)
 		return
 	}
-	if nuevaEvolucion.Titulo == "" {
-		respuesta.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(respuesta).Encode(map[string]string{"error": "El titulo del avance es obligatorio"})
-		return
-	}
-	if nuevaEvolucion.Paso <= 0 {
-		respuesta.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(respuesta).Encode(map[string]string{"error": "El numero de paso debe ser mayor a 0"})
-		return
-	}
-	_, existe := s.Almacen.BuscarMaquetaPorID(nuevaEvolucion.MaquetaID)
-	if !existe {
-		respuesta.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(respuesta).Encode(map[string]string{"error": "La maqueta especificada no existe"})
-		return
-	}
-	evolucionCreada := s.Almacen.AgregarEvolucion(nuevaEvolucion)
+
 	fmt.Println("--> Evolucion registrada para Maqueta ID:", evolucionCreada.MaquetaID, "Paso:", evolucionCreada.Paso)
 	respuesta.WriteHeader(http.StatusCreated)
 	json.NewEncoder(respuesta).Encode(evolucionCreada)
@@ -175,20 +145,19 @@ func (s *Servidor) ObtenerEvolucionPorMaqueta(respuesta http.ResponseWriter, pet
 		json.NewEncoder(respuesta).Encode(map[string]string{"error": "ID de maqueta invalido"})
 		return
 	}
-	_, existe := s.Almacen.BuscarMaquetaPorID(maquetaID)
-	if !existe {
-		respuesta.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(respuesta).Encode(map[string]string{"error": "Maqueta no encontrada"})
+
+	historial, svcErr := s.MaquetaSvc.ListarEvolucion(maquetaID)
+	if svcErr != nil {
+		responderError(respuesta, svcErr)
 		return
 	}
+
 	fmt.Println("--> Obteniendo historial de evolucion para maqueta:", maquetaID)
-	historial := s.Almacen.ListarEvolucionPorMaqueta(maquetaID)
 	json.NewEncoder(respuesta).Encode(historial)
 }
 
 func (s *Servidor) EliminarEvolucion(respuesta http.ResponseWriter, peticion *http.Request) {
 	respuesta.Header().Set("Content-Type", "application/json")
-
 	idTexto := chi.URLParam(peticion, "id")
 	id, err := strconv.Atoi(idTexto)
 	if err != nil {
@@ -197,9 +166,9 @@ func (s *Servidor) EliminarEvolucion(respuesta http.ResponseWriter, peticion *ht
 		return
 	}
 
-	if !s.Almacen.EliminarEvolucion(id) {
-		respuesta.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(respuesta).Encode(map[string]string{"error": "Evolucion no encontrada"})
+	svcErr := s.MaquetaSvc.EliminarEvolucion(id)
+	if svcErr != nil {
+		responderError(respuesta, svcErr)
 		return
 	}
 
