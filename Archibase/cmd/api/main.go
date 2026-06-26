@@ -43,6 +43,10 @@ func main() {
 		// Nota: En un paso posterior inyectaremos aquí tu servicio de autenticación (ej: servidor.AuthService)
 		r.Use(middleware.AuthMiddleware)
 
+		r.Route("/api/v1/auth", func(r chi.Router) {
+			r.Post("/registro", servidor.Registrar)
+			r.Post("/login", servidor.Login)
+		})
 		// --- MÓDULO USUARIOS (ADMINISTRACIÓN PROTEGIDA) ---
 		r.Route("/api/v1/usuarios", func(r chi.Router) {
 			r.Get("/", servidor.ObtenerUsuarios)

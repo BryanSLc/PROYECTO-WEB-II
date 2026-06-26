@@ -11,6 +11,7 @@ type Servidor struct {
 	UsuarioService *service.UsuarioService
 	MaquetaService *service.MaquetaService
 	RecetaService  *service.RecetaService
+	AuthService    *service.AuthService
 }
 
 // NuevoServidor construye la instancia inyectando las dependencias requeridas
@@ -20,5 +21,6 @@ func NuevoServidor(a *storage.SQLiteStorage) *Servidor {
 		UsuarioService: service.NuevoUsuarioService(a),
 		MaquetaService: service.NuevoMaquetaService(a),
 		RecetaService:  service.NuevoRecetaService(a),
+		AuthService:    service.NuevoAuthService(a),
 	}
 }

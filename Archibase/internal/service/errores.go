@@ -17,4 +17,8 @@ var (
 	ErrMaquetaNoEncontrada   = errors.New("maqueta no encontrada")
 	ErrEvolucionNoEncontrada = errors.New("evolucion no encontrada")
 	ErrRecetaNoEncontrada    = errors.New("receta no encontrada")
+
+	// Errores de autenticación
+	ErrEmailEnUso            = errors.New("el correo ya esta registrado")
+	ErrCredencialesInvalidas = errors.New("correo o contraseña incorrectos")
 )
