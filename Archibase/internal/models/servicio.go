@@ -1,4 +1,4 @@
-
+package models
 type Servicio struct {
 	IDservicio     int     `json:"id_servicio"`
 	Titulo         string  `json:"titulo"`

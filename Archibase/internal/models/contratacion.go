@@ -1,3 +1,5 @@
+package models
+
 type Contratacion struct {
 	IDcontratacion int    `json:"id_contratacion"`
 	Estudiante     string `json:"estudiante"`
