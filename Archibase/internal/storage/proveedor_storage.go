@@ -4,53 +4,53 @@ import (
 	"proyecto/internal/models"
 )
 
-type ProveedorStorage struct {
-	listaProveedores  []models.Proveedor
-	conteoProveedores int
+type MaterialMemoryStorage struct {
+	listaMateriales  []models.MaterialProveedor
+	conteoMateriales int
 }
 
-func NuevoProveedorStorage() *ProveedorStorage {
-	return &ProveedorStorage{
-		listaProveedores:  []models.Proveedor{},
-		conteoProveedores: 1,
+func NuevoMaterialMemoryStorage() *MaterialMemoryStorage {
+	return &MaterialMemoryStorage{
+		listaMateriales:  []models.MaterialProveedor{},
+		conteoMateriales: 1,
 	}
 }
 
-func (s *ProveedorStorage) CrearProveedor(proveedor models.Proveedor) models.Proveedor {
-	proveedor.ID = s.conteoProveedores
-	s.conteoProveedores++
-	s.listaProveedores = append(s.listaProveedores, proveedor)
-	return proveedor
+func (s *MaterialMemoryStorage) CrearMaterial(m models.MaterialProveedor) models.MaterialProveedor {
+	m.ID = s.conteoMateriales
+	s.conteoMateriales++
+	s.listaMateriales = append(s.listaMateriales, m)
+	return m
 }
 
-func (s *ProveedorStorage) ListarProveedores() []models.Proveedor {
-	return s.listaProveedores
+func (s *MaterialMemoryStorage) ListarMateriales() []models.MaterialProveedor {
+	return s.listaMateriales
 }
 
-func (s *ProveedorStorage) BuscarProveedorPorID(id int) (models.Proveedor, bool) {
-	for _, proveedor := range s.listaProveedores {
-		if proveedor.ID == id {
-			return proveedor, true
+func (s *MaterialMemoryStorage) BuscarMaterialPorID(id int) (models.MaterialProveedor, bool) {
+	for _, m := range s.listaMateriales {
+		if m.ID == id {
+			return m, true
 		}
 	}
-	return models.Proveedor{}, false
+	return models.MaterialProveedor{}, false
 }
 
-func (s *ProveedorStorage) ActualizarProveedor(id int, datos models.Proveedor) (models.Proveedor, bool) {
-	for i, proveedor := range s.listaProveedores {
-		if proveedor.ID == id {
+func (s *MaterialMemoryStorage) ActualizarMaterial(id int, datos models.MaterialProveedor) (models.MaterialProveedor, bool) {
+	for i, m := range s.listaMateriales {
+		if m.ID == id {
 			datos.ID = id
-			s.listaProveedores[i] = datos
+			s.listaMateriales[i] = datos
 			return datos, true
 		}
 	}
-	return models.Proveedor{}, false
+	return models.MaterialProveedor{}, false
 }
 
-func (s *ProveedorStorage) EliminarProveedor(id int) bool {
-	for i, proveedor := range s.listaProveedores {
-		if proveedor.ID == id {
-			s.listaProveedores = append(s.listaProveedores[:i], s.listaProveedores[i+1:]...)
+func (s *MaterialMemoryStorage) EliminarMaterial(id int) bool {
+	for i, m := range s.listaMateriales {
+		if m.ID == id {
+			s.listaMateriales = append(s.listaMateriales[:i], s.listaMateriales[i+1:]...)
 			return true
 		}
 	}

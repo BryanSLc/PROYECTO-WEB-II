@@ -104,7 +104,7 @@ func main() {
 			r.Post("/", servidor.CrearUbicacion)
 			r.Get("/", servidor.ObtenerUbicaciones)
 			r.Get("/{id}", servidor.ObtenerUbicacionPorID)
-			r.Put("/", servidor.ActualizarUbicacion)
+			r.Put("/{id}", servidor.ActualizarUbicacion)
 			r.Delete("/{id}", servidor.EliminarUbicacion)
 		})
 
