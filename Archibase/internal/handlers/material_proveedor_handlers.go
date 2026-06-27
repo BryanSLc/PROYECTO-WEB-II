@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -9,112 +10,103 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"proyecto/internal/models"
+	"proyecto/internal/service"
 )
 
 func (s *Servidor) CrearMaterial(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
 	var nuevoMaterial models.MaterialProveedor
 	err := json.NewDecoder(r.Body).Decode(&nuevoMaterial)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Datos invalidos"})
+		RespondError(w, http.StatusBadRequest, "Datos invalidos")
 		return
 	}
-	if nuevoMaterial.Nombre == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "El nombre es obligatorio"})
+	materialCreado, err := s.MaterialService.Crear(nuevoMaterial)
+	if err != nil {
+		if errors.Is(err, service.ErrNombreMaterialObligatorio) {
+			RespondError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		RespondError(w, http.StatusInternalServerError, "Error interno del servidor")
 		return
 	}
-
-	materialCreado := s.Almacen.CrearMaterial(nuevoMaterial)
-	fmt.Println("--> Material creado con ID:", materialCreado.ID)
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(materialCreado)
+	fmt.Println("Material creado con ID:", materialCreado.ID)
+	RespondJSON(w, http.StatusCreated, materialCreado)
 }
 
 func (s *Servidor) ObtenerMateriales(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	fmt.Println("--> Obteniendo todos los materiales")
-	materiales := s.Almacen.ListarMateriales()
-	json.NewEncoder(w).Encode(materiales)
+	fmt.Println("Obteniendo todos los materiales")
+	RespondJSON(w, http.StatusOK, s.MaterialService.Listar())
 }
 
 func (s *Servidor) ObtenerMaterialPorID(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
 	idTexto := chi.URLParam(r, "id")
 	id, err := strconv.Atoi(idTexto)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "ID invalido"})
+		RespondError(w, http.StatusBadRequest, "ID invalido")
 		return
 	}
-
-	material, encontrado := s.Almacen.BuscarMaterialPorID(id)
-	if !encontrado {
-		fmt.Println("--> Material no encontrado con ID:", id)
-		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Material no encontrado"})
+	material, err := s.MaterialService.BuscarPorID(id)
+	if err != nil {
+		if errors.Is(err, service.ErrMaterialNoEncontrado) {
+			fmt.Println("Material no encontrado con ID:", id)
+			RespondError(w, http.StatusNotFound, err.Error())
+			return
+		}
+		RespondError(w, http.StatusInternalServerError, "Error interno del servidor")
 		return
 	}
-
-	fmt.Println("--> Material encontrado con ID:", id)
-	json.NewEncoder(w).Encode(material)
+	fmt.Println("Material encontrado con ID:", id)
+	RespondJSON(w, http.StatusOK, material)
 }
 
 func (s *Servidor) ActualizarMaterial(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
 	idTexto := chi.URLParam(r, "id")
 	id, err := strconv.Atoi(idTexto)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "ID invalido"})
+		RespondError(w, http.StatusBadRequest, "ID invalido")
 		return
 	}
-
 	var actualizado models.MaterialProveedor
 	err = json.NewDecoder(r.Body).Decode(&actualizado)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Datos invalidos"})
+		RespondError(w, http.StatusBadRequest, "Datos invalidos")
 		return
 	}
-	if actualizado.Nombre == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "El nombre es obligatorio"})
+	material, err := s.MaterialService.Actualizar(id, actualizado)
+	if err != nil {
+		if errors.Is(err, service.ErrNombreMaterialObligatorio) {
+			RespondError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		if errors.Is(err, service.ErrMaterialNoEncontrado) {
+			fmt.Println("Material no encontrado con ID:", id)
+			RespondError(w, http.StatusNotFound, err.Error())
+			return
+		}
+		RespondError(w, http.StatusInternalServerError, "Error interno del servidor")
 		return
 	}
-
-	material, encontrado := s.Almacen.ActualizarMaterial(id, actualizado)
-	if !encontrado {
-		fmt.Println("--> Material no encontrado con ID:", id)
-		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Material no encontrado"})
-		return
-	}
-
-	fmt.Println("--> Material actualizado con ID:", id)
-	json.NewEncoder(w).Encode(material)
+	fmt.Println("Material actualizado con ID:", id)
+	RespondJSON(w, http.StatusOK, material)
 }
 
 func (s *Servidor) EliminarMaterial(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
 	idTexto := chi.URLParam(r, "id")
 	id, err := strconv.Atoi(idTexto)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "ID invalido"})
+		RespondError(w, http.StatusBadRequest, "ID invalido")
 		return
 	}
-
-	exito := s.Almacen.EliminarMaterial(id)
-	if !exito {
-		fmt.Println("--> Material no encontrado con ID:", id)
-		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Material no encontrado"})
+	err = s.MaterialService.Eliminar(id)
+	if err != nil {
+		if errors.Is(err, service.ErrMaterialNoEncontrado) {
+			fmt.Println("Material no encontrado con ID:", id)
+			RespondError(w, http.StatusNotFound, err.Error())
+			return
+		}
+		RespondError(w, http.StatusInternalServerError, "Error interno del servidor")
 		return
 	}
-
-	fmt.Println("--> Material eliminado con ID:", id)
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"mensaje": "Material eliminado correctamente"})
+	fmt.Println("Material eliminado con ID:", id)
+	RespondJSON(w, http.StatusOK, map[string]string{"mensaje": "Material eliminado correctamente"})
 }

@@ -17,4 +17,17 @@ var (
 	ErrMaquetaNoEncontrada   = errors.New("maqueta no encontrada")
 	ErrEvolucionNoEncontrada = errors.New("evolucion no encontrada")
 	ErrRecetaNoEncontrada    = errors.New("receta no encontrada")
+
+	// Errores de Proveedores
+	ErrNombreProveedorObligatorio = errors.New("el nombre es obligatorio")
+	ErrProveedorNoEncontrado      = errors.New("proveedor no encontrado")
+
+	// Errores de Materiales
+	ErrNombreMaterialObligatorio = errors.New("el nombre es obligatorio")
+	ErrMaterialNoEncontrado      = errors.New("material no encontrado")
+
+	// Errores de Ubicaciones
+	ErrProvinciaUbicacionObligatoria = errors.New("la provincia es obligatoria")
+	ErrCiudadUbicacionObligatoria    = errors.New("la ciudad es obligatoria")
+	ErrUbicacionNoEncontrada         = errors.New("ubicacion no encontrada")
 )

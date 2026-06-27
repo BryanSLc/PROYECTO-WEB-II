@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -9,107 +10,103 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"proyecto/internal/models"
+	"proyecto/internal/service"
 )
 
 func (s *Servidor) CrearUbicacion(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
 	var nuevaUbicacion models.Ubicacion
 	err := json.NewDecoder(r.Body).Decode(&nuevaUbicacion)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Datos invalidos"})
+		RespondError(w, http.StatusBadRequest, "Datos invalidos")
 		return
 	}
-	if nuevaUbicacion.Provincia == "" || nuevaUbicacion.Ciudad == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Provincia y Ciudad son obligatorias"})
+	ubicacionCreada, err := s.UbicacionService.Crear(nuevaUbicacion)
+	if err != nil {
+		if errors.Is(err, service.ErrProvinciaUbicacionObligatoria) || errors.Is(err, service.ErrCiudadUbicacionObligatoria) {
+			RespondError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		RespondError(w, http.StatusInternalServerError, "Error interno del servidor")
 		return
 	}
-
-	ubicacionCreada := s.Almacen.CrearUbicacion(nuevaUbicacion)
-	fmt.Println("--> Ubicacion creada con ID:", ubicacionCreada.ID)
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(ubicacionCreada)
+	fmt.Println("Ubicacion creada con ID:", ubicacionCreada.ID)
+	RespondJSON(w, http.StatusCreated, ubicacionCreada)
 }
 
 func (s *Servidor) ObtenerUbicaciones(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	fmt.Println("--> Obteniendo todas las ubicaciones")
-	ubicaciones := s.Almacen.ListarUbicaciones()
-	json.NewEncoder(w).Encode(ubicaciones)
+	fmt.Println("-Obteniendo todas las ubicaciones")
+	RespondJSON(w, http.StatusOK, s.UbicacionService.Listar())
 }
 
 func (s *Servidor) ObtenerUbicacionPorID(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
 	idTexto := chi.URLParam(r, "id")
 	id, err := strconv.Atoi(idTexto)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "ID invalido"})
+		RespondError(w, http.StatusBadRequest, "ID invalido")
 		return
 	}
-
-	ubicacion, encontrado := s.Almacen.BuscarUbicacionPorID(id)
-	if !encontrado {
-		fmt.Println("--> Ubicacion no encontrada con ID:", id)
-		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Ubicacion no encontrada"})
+	ubicacion, err := s.UbicacionService.BuscarPorID(id)
+	if err != nil {
+		if errors.Is(err, service.ErrUbicacionNoEncontrada) {
+			fmt.Println("Ubicacion no encontrada con ID:", id)
+			RespondError(w, http.StatusNotFound, err.Error())
+			return
+		}
+		RespondError(w, http.StatusInternalServerError, "Error interno del servidor")
 		return
 	}
-
-	fmt.Println("--> Ubicacion encontrada con ID:", id)
-	json.NewEncoder(w).Encode(ubicacion)
+	fmt.Println("Ubicacion encontrada con ID:", id)
+	RespondJSON(w, http.StatusOK, ubicacion)
 }
 
 func (s *Servidor) ActualizarUbicacion(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
 	idTexto := chi.URLParam(r, "id")
 	id, err := strconv.Atoi(idTexto)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "ID invalido"})
+		RespondError(w, http.StatusBadRequest, "ID invalido")
 		return
 	}
-
-	var ubicacionActualizada models.Ubicacion
-	err = json.NewDecoder(r.Body).Decode(&ubicacionActualizada)
+	var actualizada models.Ubicacion
+	err = json.NewDecoder(r.Body).Decode(&actualizada)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Datos invalidos"})
+		RespondError(w, http.StatusBadRequest, "Datos invalidos")
 		return
 	}
-
-	ubicacion, encontrado := s.Almacen.ActualizarUbicacion(id, ubicacionActualizada)
-	if !encontrado {
-		fmt.Println("--> Ubicacion no encontrada con ID:", id)
-		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Ubicacion no encontrada"})
+	ubicacion, err := s.UbicacionService.Actualizar(id, actualizada)
+	if err != nil {
+		if errors.Is(err, service.ErrProvinciaUbicacionObligatoria) || errors.Is(err, service.ErrCiudadUbicacionObligatoria) {
+			RespondError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		if errors.Is(err, service.ErrUbicacionNoEncontrada) {
+			fmt.Println("Ubicacion no encontrada con ID:", id)
+			RespondError(w, http.StatusNotFound, err.Error())
+			return
+		}
+		RespondError(w, http.StatusInternalServerError, "Error interno del servidor")
 		return
 	}
-
-	fmt.Println("--> Ubicacion actualizada con ID:", id)
-	json.NewEncoder(w).Encode(ubicacion)
+	fmt.Println("Ubicacion actualizada con ID:", id)
+	RespondJSON(w, http.StatusOK, ubicacion)
 }
 
 func (s *Servidor) EliminarUbicacion(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
 	idTexto := chi.URLParam(r, "id")
 	id, err := strconv.Atoi(idTexto)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "ID invalido"})
+		RespondError(w, http.StatusBadRequest, "ID invalido")
 		return
 	}
-
-	exito := s.Almacen.EliminarUbicacion(id)
-	if !exito {
-		fmt.Println("--> Ubicacion no encontrada con ID:", id)
-		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Ubicacion no encontrada"})
+	err = s.UbicacionService.Eliminar(id)
+	if err != nil {
+		if errors.Is(err, service.ErrUbicacionNoEncontrada) {
+			fmt.Println("Ubicacion no encontrada con ID:", id)
+			RespondError(w, http.StatusNotFound, err.Error())
+			return
+		}
+		RespondError(w, http.StatusInternalServerError, "Error interno del servidor")
 		return
 	}
-
-	fmt.Println("--> Ubicacion eliminada con ID:", id)
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"mensaje": "Ubicacion eliminada correctamente"})
+	fmt.Println("Ubicacion eliminada con ID:", id)
+	RespondJSON(w, http.StatusOK, map[string]string{"mensaje": "Ubicacion eliminada correctamente"})
 }

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -9,104 +10,103 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"proyecto/internal/models"
+	"proyecto/internal/service"
 )
 
 func (s *Servidor) CrearProveedor(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
 	var nuevoProveedor models.Proveedor
 	err := json.NewDecoder(r.Body).Decode(&nuevoProveedor)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Datos invalidos"})
+		RespondError(w, http.StatusBadRequest, "Datos invalidos")
 		return
 	}
-	if nuevoProveedor.Nombre == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "El nombre es obligatorio"})
+	proveedorCreado, err := s.ProveedorService.Crear(nuevoProveedor)
+	if err != nil {
+		if errors.Is(err, service.ErrNombreProveedorObligatorio) {
+			RespondError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		RespondError(w, http.StatusInternalServerError, "Error interno del servidor")
 		return
 	}
-	proveedorCreado := s.Almacen.CrearProveedor(nuevoProveedor)
-	fmt.Println("--> Proveedor creado con ID:", proveedorCreado.ID)
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(proveedorCreado)
+	fmt.Println("Proveedor creado con ID:", proveedorCreado.ID)
+	RespondJSON(w, http.StatusCreated, proveedorCreado)
 }
 
 func (s *Servidor) ObtenerProveedores(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	fmt.Println("--> Obteniendo todos los proveedores")
-	proveedores := s.Almacen.ListarProveedores()
-	json.NewEncoder(w).Encode(proveedores)
+	fmt.Println("Obteniendo todos los proveedores")
+	RespondJSON(w, http.StatusOK, s.ProveedorService.Listar())
 }
 
 func (s *Servidor) ObtenerProveedorPorID(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
 	idTexto := chi.URLParam(r, "id")
 	id, err := strconv.Atoi(idTexto)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "ID invalido"})
+		RespondError(w, http.StatusBadRequest, "ID invalido")
 		return
 	}
-	proveedor, encontrado := s.Almacen.BuscarProveedorPorID(id)
-	if !encontrado {
-		fmt.Println("--> Proveedor no encontrado con ID:", id)
-		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Proveedor no encontrado"})
+	proveedor, err := s.ProveedorService.BuscarPorID(id)
+	if err != nil {
+		if errors.Is(err, service.ErrProveedorNoEncontrado) {
+			fmt.Println("Proveedor no encontrado con ID:", id)
+			RespondError(w, http.StatusNotFound, err.Error())
+			return
+		}
+		RespondError(w, http.StatusInternalServerError, "Error interno del servidor")
 		return
 	}
-	fmt.Println("--> Proveedor encontrado con ID:", id)
-	json.NewEncoder(w).Encode(proveedor)
+	fmt.Println("Proveedor encontrado con ID:", id)
+	RespondJSON(w, http.StatusOK, proveedor)
 }
 
 func (s *Servidor) ActualizarProveedor(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
 	idTexto := chi.URLParam(r, "id")
 	id, err := strconv.Atoi(idTexto)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "ID invalido"})
+		RespondError(w, http.StatusBadRequest, "ID invalido")
 		return
 	}
 	var actualizado models.Proveedor
 	err = json.NewDecoder(r.Body).Decode(&actualizado)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Datos invalidos"})
+		RespondError(w, http.StatusBadRequest, "Datos invalidos")
 		return
 	}
-	if actualizado.Nombre == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "El nombre es obligatorio"})
+	proveedor, err := s.ProveedorService.Actualizar(id, actualizado)
+	if err != nil {
+		if errors.Is(err, service.ErrNombreProveedorObligatorio) {
+			RespondError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		if errors.Is(err, service.ErrProveedorNoEncontrado) {
+			fmt.Println("Proveedor no encontrado con ID:", id)
+			RespondError(w, http.StatusNotFound, err.Error())
+			return
+		}
+		RespondError(w, http.StatusInternalServerError, "Error interno del servidor")
 		return
 	}
-	proveedor, encontrado := s.Almacen.ActualizarProveedor(id, actualizado)
-	if !encontrado {
-		fmt.Println("--> Proveedor no encontrado con ID:", id)
-		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Proveedor no encontrado"})
-		return
-	}
-	fmt.Println("--> Proveedor actualizado con ID:", id)
-	json.NewEncoder(w).Encode(proveedor)
+	fmt.Println("Proveedor actualizado con ID:", id)
+	RespondJSON(w, http.StatusOK, proveedor)
 }
 
 func (s *Servidor) EliminarProveedor(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
 	idTexto := chi.URLParam(r, "id")
 	id, err := strconv.Atoi(idTexto)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "ID invalido"})
+		RespondError(w, http.StatusBadRequest, "ID invalido")
 		return
 	}
-	exito := s.Almacen.EliminarProveedor(id)
-	if !exito {
-		fmt.Println("--> Proveedor no encontrado con ID:", id)
-		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Proveedor no encontrado"})
+	err = s.ProveedorService.Eliminar(id)
+	if err != nil {
+		if errors.Is(err, service.ErrProveedorNoEncontrado) {
+			fmt.Println("Proveedor no encontrado con ID:", id)
+			RespondError(w, http.StatusNotFound, err.Error())
+			return
+		}
+		RespondError(w, http.StatusInternalServerError, "Error interno del servidor")
 		return
 	}
-	fmt.Println("--> Proveedor eliminado con ID:", id)
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"mensaje": "Proveedor eliminado correctamente"})
+	fmt.Println("Proveedor eliminado con ID:", id)
+	RespondJSON(w, http.StatusOK, map[string]string{"mensaje": "Proveedor eliminado correctamente"})
 }

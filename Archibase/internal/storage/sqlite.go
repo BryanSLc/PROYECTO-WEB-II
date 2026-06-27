@@ -29,6 +29,7 @@ func NuevoSQLiteStorage(pathDB string) *SQLiteStorage {
 		&models.Receta{},
 		&models.Proveedor{},
 		&models.MaterialProveedor{},
+		&models.Ubicacion{},
 	)
 	if err != nil {
 		log.Fatalf("Error al realizar la migración: %v", err)
