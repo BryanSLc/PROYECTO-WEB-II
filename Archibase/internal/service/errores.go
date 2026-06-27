@@ -30,4 +30,8 @@ var (
 	ErrProvinciaUbicacionObligatoria = errors.New("la provincia es obligatoria")
 	ErrCiudadUbicacionObligatoria    = errors.New("la ciudad es obligatoria")
 	ErrUbicacionNoEncontrada         = errors.New("ubicacion no encontrada")
+
+	// Errores de autenticación
+	ErrEmailEnUso            = errors.New("el correo ya esta registrado")
+	ErrCredencialesInvalidas = errors.New("correo o contraseña incorrectos")
 )

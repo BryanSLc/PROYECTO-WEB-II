@@ -266,6 +266,15 @@ func (s *SQLiteStorage) BuscarUsuarioPorID(id int) (models.Usuario, bool) {
 	return usuario, true
 }
 
+func (s *SQLiteStorage) BuscarUsuarioPorEmail(email string) (models.Usuario, bool) {
+	var usuario models.Usuario
+	err := s.db.Where("email = ?", email).First(&usuario).Error
+	if err != nil {
+		return models.Usuario{}, false
+	}
+	return usuario, true
+}
+
 func (s *SQLiteStorage) ActualizarUsuario(id int, datos models.Usuario) (models.Usuario, bool) {
 	var usuario models.Usuario
 	err := s.db.First(&usuario, id).Error
