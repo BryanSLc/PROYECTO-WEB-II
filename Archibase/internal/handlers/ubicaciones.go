@@ -9,97 +9,107 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"proyecto/internal/models"
-	"proyecto/internal/storage"
 )
 
-func CrearUbicacion(w http.ResponseWriter, r *http.Request) {
+func (s *Servidor) CrearUbicacion(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	var nuevaUbicacion models.Ubicacion
 	err := json.NewDecoder(r.Body).Decode(&nuevaUbicacion)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Datos invalidos"})
 		return
 	}
 	if nuevaUbicacion.Provincia == "" || nuevaUbicacion.Ciudad == "" {
 		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Provincia y Ciudad son obligatorias"})
 		return
 	}
-	nuevaUbicacion.ID = storage.ConteoUbicaciones
-	storage.ConteoUbicaciones++
-	storage.ListaUbicaciones = append(storage.ListaUbicaciones, nuevaUbicacion)
-	fmt.Println("--> Ubicacion creada con ID:", nuevaUbicacion.ID)
+
+	ubicacionCreada := s.Almacen.CrearUbicacion(nuevaUbicacion)
+	fmt.Println("--> Ubicacion creada con ID:", ubicacionCreada.ID)
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(nuevaUbicacion)
+	json.NewEncoder(w).Encode(ubicacionCreada)
 }
 
-func ObtenerUbicaciones(w http.ResponseWriter, r *http.Request) {
+func (s *Servidor) ObtenerUbicaciones(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Println("--> Obteniendo todas las ubicaciones")
-	json.NewEncoder(w).Encode(storage.ListaUbicaciones)
+	ubicaciones := s.Almacen.ListarUbicaciones()
+	json.NewEncoder(w).Encode(ubicaciones)
 }
 
-func ObtenerUbicacionPorID(w http.ResponseWriter, r *http.Request) {
+func (s *Servidor) ObtenerUbicacionPorID(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 	idTexto := chi.URLParam(r, "id")
 	id, err := strconv.Atoi(idTexto)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "ID invalido"})
 		return
 	}
-	for _, ubicacion := range storage.ListaUbicaciones {
-		if ubicacion.ID == id {
-			fmt.Println("--> Ubicacion encontrada con ID:", id)
-			json.NewEncoder(w).Encode(ubicacion)
-			return
-		}
+
+	ubicacion, encontrado := s.Almacen.BuscarUbicacionPorID(id)
+	if !encontrado {
+		fmt.Println("--> Ubicacion no encontrada con ID:", id)
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Ubicacion no encontrada"})
+		return
 	}
-	fmt.Println("--> Ubicacion no encontrada con ID:", id)
-	w.WriteHeader(http.StatusNotFound)
+
+	fmt.Println("--> Ubicacion encontrada con ID:", id)
+	json.NewEncoder(w).Encode(ubicacion)
 }
 
-func ActualizarUbicacion(w http.ResponseWriter, r *http.Request) {
+func (s *Servidor) ActualizarUbicacion(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 	idTexto := chi.URLParam(r, "id")
 	id, err := strconv.Atoi(idTexto)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "ID invalido"})
 		return
 	}
+
 	var ubicacionActualizada models.Ubicacion
 	err = json.NewDecoder(r.Body).Decode(&ubicacionActualizada)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Datos invalidos"})
 		return
 	}
-	for i, ubicacion := range storage.ListaUbicaciones {
-		if ubicacion.ID == id {
-			ubicacionActualizada.ID = id
-			storage.ListaUbicaciones[i] = ubicacionActualizada
-			fmt.Println("--> Ubicacion actualizada con ID:", id)
-			json.NewEncoder(w).Encode(ubicacionActualizada)
-			return
-		}
+
+	ubicacion, encontrado := s.Almacen.ActualizarUbicacion(id, ubicacionActualizada)
+	if !encontrado {
+		fmt.Println("--> Ubicacion no encontrada con ID:", id)
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Ubicacion no encontrada"})
+		return
 	}
-	fmt.Println("--> Ubicacion no encontrada con ID:", id)
-	w.WriteHeader(http.StatusNotFound)
+
+	fmt.Println("--> Ubicacion actualizada con ID:", id)
+	json.NewEncoder(w).Encode(ubicacion)
 }
 
-func EliminarUbicacion(w http.ResponseWriter, r *http.Request) {
+func (s *Servidor) EliminarUbicacion(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 	idTexto := chi.URLParam(r, "id")
 	id, err := strconv.Atoi(idTexto)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "ID invalido"})
 		return
 	}
-	for i, ubicacion := range storage.ListaUbicaciones {
-		if ubicacion.ID == id {
-			storage.ListaUbicaciones = append(
-				storage.ListaUbicaciones[:i],
-				storage.ListaUbicaciones[i+1:]...,
-			)
-			fmt.Println("--> Ubicacion eliminada con ID:", id)
-			w.WriteHeader(http.StatusOK)
-			return
-		}
+
+	exito := s.Almacen.EliminarUbicacion(id)
+	if !exito {
+		fmt.Println("--> Ubicacion no encontrada con ID:", id)
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Ubicacion no encontrada"})
+		return
 	}
-	fmt.Println("--> Ubicacion no encontrada con ID:", id)
-	w.WriteHeader(http.StatusNotFound)
+
+	fmt.Println("--> Ubicacion eliminada con ID:", id)
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"mensaje": "Ubicacion eliminada correctamente"})
 }

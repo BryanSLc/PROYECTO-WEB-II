@@ -27,12 +27,148 @@ func NuevoSQLiteStorage(pathDB string) *SQLiteStorage {
 		&models.Maqueta{},
 		&models.EvolucionMaqueta{},
 		&models.Receta{},
+		&models.Proveedor{},
+		&models.MaterialProveedor{},
 	)
 	if err != nil {
 		log.Fatalf("Error al realizar la migración: %v", err)
 	}
 
 	return &SQLiteStorage{db: db}
+}
+
+// ==========================================
+//          MÉTODOS PARA PROVEEDORES
+// ==========================================
+
+func (s *SQLiteStorage) CrearProveedor(proveedor models.Proveedor) models.Proveedor {
+	s.db.Create(&proveedor)
+	return proveedor
+}
+
+func (s *SQLiteStorage) ListarProveedores() []models.Proveedor {
+	var proveedores []models.Proveedor
+	s.db.Find(&proveedores)
+	return proveedores
+}
+
+func (s *SQLiteStorage) BuscarProveedorPorID(id int) (models.Proveedor, bool) {
+	var proveedor models.Proveedor
+	err := s.db.First(&proveedor, id).Error
+	if err != nil {
+		return models.Proveedor{}, false
+	}
+	return proveedor, true
+}
+
+func (s *SQLiteStorage) ActualizarProveedor(id int, datos models.Proveedor) (models.Proveedor, bool) {
+	var proveedor models.Proveedor
+	err := s.db.First(&proveedor, id).Error
+	if err != nil {
+		return models.Proveedor{}, false
+	}
+
+	proveedor.Nombre = datos.Nombre
+	proveedor.Ciudad = datos.Ciudad
+	proveedor.Provincia = datos.Provincia
+	proveedor.Direccion = datos.Direccion
+	proveedor.Telefono = datos.Telefono
+
+	s.db.Save(&proveedor)
+	return proveedor, true
+}
+
+func (s *SQLiteStorage) EliminarProveedor(id int) bool {
+	resultado := s.db.Delete(&models.Proveedor{}, id)
+	return resultado.RowsAffected > 0
+}
+
+// ==========================================
+//     MÉTODOS PARA MATERIAL PROVEEDOR
+// ==========================================
+
+func (s *SQLiteStorage) CrearMaterial(material models.MaterialProveedor) models.MaterialProveedor {
+	s.db.Create(&material)
+	return material
+}
+
+func (s *SQLiteStorage) ListarMateriales() []models.MaterialProveedor {
+	var materiales []models.MaterialProveedor
+	s.db.Find(&materiales)
+	return materiales
+}
+
+func (s *SQLiteStorage) BuscarMaterialPorID(id int) (models.MaterialProveedor, bool) {
+	var material models.MaterialProveedor
+	err := s.db.First(&material, id).Error
+	if err != nil {
+		return models.MaterialProveedor{}, false
+	}
+	return material, true
+}
+
+func (s *SQLiteStorage) ActualizarMaterial(id int, datos models.MaterialProveedor) (models.MaterialProveedor, bool) {
+	var material models.MaterialProveedor
+	err := s.db.First(&material, id).Error
+	if err != nil {
+		return models.MaterialProveedor{}, false
+	}
+
+	material.Nombre = datos.Nombre
+	material.Categoria = datos.Categoria
+	material.PrecioReferencial = datos.PrecioReferencial
+	material.IDProveedor = datos.IDProveedor
+
+	s.db.Save(&material)
+	return material, true
+}
+
+func (s *SQLiteStorage) EliminarMaterial(id int) bool {
+	resultado := s.db.Delete(&models.MaterialProveedor{}, id)
+	return resultado.RowsAffected > 0
+}
+
+// ==========================================
+//          MÉTODOS PARA UBICACIONES
+// ==========================================
+
+func (s *SQLiteStorage) CrearUbicacion(ubicacion models.Ubicacion) models.Ubicacion {
+	s.db.Create(&ubicacion)
+	return ubicacion
+}
+
+func (s *SQLiteStorage) ListarUbicaciones() []models.Ubicacion {
+	var ubicaciones []models.Ubicacion
+	s.db.Find(&ubicaciones)
+	return ubicaciones
+}
+
+func (s *SQLiteStorage) BuscarUbicacionPorID(id int) (models.Ubicacion, bool) {
+	var ubicacion models.Ubicacion
+	err := s.db.First(&ubicacion, id).Error
+	if err != nil {
+		return models.Ubicacion{}, false
+	}
+	return ubicacion, true
+}
+
+func (s *SQLiteStorage) ActualizarUbicacion(id int, datos models.Ubicacion) (models.Ubicacion, bool) {
+	var ubicacion models.Ubicacion
+	err := s.db.First(&ubicacion, id).Error
+	if err != nil {
+		return models.Ubicacion{}, false
+	}
+
+	ubicacion.Provincia = datos.Provincia
+	ubicacion.Ciudad = datos.Ciudad
+
+	s.db.Save(&ubicacion)
+	return ubicacion, true
+}
+
+func (s *SQLiteStorage) EliminarUbicacion(id int) bool {
+	resultado := s.db.Delete(&models.Ubicacion{}, id)
+	return resultado.RowsAffected > 0
 }
 
 // ==========================================

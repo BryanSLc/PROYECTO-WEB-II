@@ -76,11 +76,11 @@ func main() {
 		// --- MÓDULOS CON FUNCIONES GLOBALES (handlers.*) ---
 
 		r.Route("/api/v1/proveedores", func(r chi.Router) {
-			r.Post("/", handlers.CrearProveedor)
-			r.Get("/", handlers.ObtenerProveedores)
-			r.Get("/{id}", handlers.ObtenerProveedorPorID)
-			r.Put("/{id}", handlers.ActualizarProveedor)
-			r.Delete("/{id}", handlers.EliminarProveedor)
+			r.Post("/", servidor.CrearProveedor)
+			r.Get("/", servidor.ObtenerProveedores)
+			r.Get("/{id}", servidor.ObtenerProveedorPorID)
+			r.Put("/{id}", servidor.ActualizarProveedor)
+			r.Delete("/{id}", servidor.EliminarProveedor)
 		})
 
 		r.Route("/api/v1/asesores", func(r chi.Router) {
@@ -100,11 +100,11 @@ func main() {
 		})
 
 		r.Route("/api/v1/ubicaciones", func(r chi.Router) {
-			r.Post("/", handlers.CrearUbicacion)
-			r.Get("/", handlers.ObtenerUbicaciones)
-			r.Get("/{id}", handlers.ObtenerUbicacionPorID)
-			r.Put("/", handlers.ActualizarUbicacion)
-			r.Delete("/{id}", handlers.EliminarUbicacion)
+			r.Post("/", servidor.CrearUbicacion)
+			r.Get("/", servidor.ObtenerUbicaciones)
+			r.Get("/{id}", servidor.ObtenerUbicacionPorID)
+			r.Put("/{id}", servidor.ActualizarUbicacion)
+			r.Delete("/{id}", servidor.EliminarUbicacion)
 		})
 
 		r.Route("/api/v1/servicios", func(r chi.Router) {
@@ -116,11 +116,11 @@ func main() {
 		})
 
 		r.Route("/api/v1/materiales", func(r chi.Router) {
-			r.Post("/", handlers.CrearMaterial)
-			r.Get("/", handlers.ObtenerMateriales)
-			r.Get("/{id}", handlers.ObtenerMaterialPorID)
-			r.Put("/{id}", handlers.ActualizarMaterial)
-			r.Delete("/{id}", handlers.EliminarMaterial)
+			r.Post("/", servidor.CrearMaterial)
+			r.Get("/", servidor.ObtenerMateriales)
+			r.Get("/{id}", servidor.ObtenerMaterialPorID)
+			r.Put("/{id}", servidor.ActualizarMaterial)
+			r.Delete("/{id}", servidor.EliminarMaterial)
 		})
 	})
 
