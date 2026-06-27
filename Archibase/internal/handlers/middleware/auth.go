@@ -5,67 +5,44 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/golang-jwt/jwt/v5"
+	"proyecto/internal/service"
 )
 
-// Definimos una clave secreta para firmar los tokens (en producción va en un archivo .env)
-var ClaveSecreta = []byte("mi_secreto_super_seguro_para_arquidraft")
-
-// Definimos un tipo personalizado para la clave del contexto (evita colisiones de nombres)
+// Tipo personalizado para la clave del contexto (evita colisiones de nombres)
 type contextKey string
 
 const UsuarioIDKey contextKey = "usuario_id"
 
-// AuthMiddleware intercepta la petición, valida el JWT e inyecta el ID del usuario en el Context
-func AuthMiddleware(siguiente http.Handler) http.Handler {
-	return http.HandlerFunc(func(respuesta http.ResponseWriter, peticion *http.Request) {
-		// 1. Leer el encabezado de Autorización
-		cabecera := peticion.Header.Get("Authorization")
-		if cabecera == "" {
-			http.Error(respuesta, `{"error": "Se requiere token de autenticacion"}`, http.StatusUnauthorized)
-			return
-		}
-
-		// 2. Validar que tenga el formato "Bearer <token>"
-		partes := strings.Split(cabecera, " ")
-		if len(partes) != 2 || partes[0] != "Bearer" {
-			http.Error(respuesta, `{"error": "Formato de token invalido"}`, http.StatusUnauthorized)
-			return
-		}
-
-		tokenTexto := partes[1]
-
-		// 3. Parsear y verificar la firma del token JWT
-		token, err := jwt.Parse(tokenTexto, func(t *jwt.Token) (interface{}, error) {
-			// Validar que el algoritmo de firma sea el esperado (HMAC)
-			if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, jwt.ErrSignatureInvalid
+// AuthMiddleware recibe el AuthService inyectado y devuelve el middleware real.
+// Así la lógica de verificación del JWT vive en el service (igual que Registrar/Login),
+// y el middleware solo se encarga de leer el header y guardar el ID en el contexto.
+func AuthMiddleware(authService *service.AuthService) func(http.Handler) http.Handler {
+	return func(siguiente http.Handler) http.Handler {
+		return http.HandlerFunc(func(respuesta http.ResponseWriter, peticion *http.Request) {
+			// 1. Leer el encabezado de Autorización
+			cabecera := peticion.Header.Get("Authorization")
+			if cabecera == "" {
+				http.Error(respuesta, `{"error": "Se requiere token de autenticacion"}`, http.StatusUnauthorized)
+				return
 			}
-			return ClaveSecreta, nil
+
+			// 2. Validar que tenga el formato "Bearer <token>"
+			partes := strings.Split(cabecera, " ")
+			if len(partes) != 2 || partes[0] != "Bearer" {
+				http.Error(respuesta, `{"error": "Formato de token invalido"}`, http.StatusUnauthorized)
+				return
+			}
+
+			// 3. Delegar la verificación al AuthService (igual que generarToken vive en el service)
+			usuarioID, err := authService.VerificarToken(partes[1])
+			if err != nil {
+				http.Error(respuesta, `{"error": "Token invalido o expirado"}`, http.StatusUnauthorized)
+				return
+			}
+
+			// 4. Inyectar el ID del usuario en el contexto de la petición y continuar
+			ctx := context.WithValue(peticion.Context(), UsuarioIDKey, usuarioID)
+			siguiente.ServeHTTP(respuesta, peticion.WithContext(ctx))
 		})
-
-		if err != nil || !token.Valid {
-			http.Error(respuesta, `{"error": "Token invalido o expirado"}`, http.StatusUnauthorized)
-			return
-		}
-
-		// 4. Extraer los datos (Claims) del Payload del token
-		claims, ok := token.Claims.(jwt.MapClaims)
-		if !ok {
-			http.Error(respuesta, `{"error": "Error al leer los claims"}`, http.StatusUnauthorized)
-			return
-		}
-
-		// Extraemos el "user_id" (en los JWT numéricos de Go suelen parsearse como float64)
-		usuarioIDFloat, ok := claims["user_id"].(float64)
-		if !ok {
-			http.Error(respuesta, `{"error": "Token no contiene identificador de usuario"}`, http.StatusUnauthorized)
-			return
-		}
-		usuarioID := int(usuarioIDFloat)
-
-		// 5. Inyectar el ID del usuario en el contexto de la petición y continuar
-		ctx := context.WithValue(peticion.Context(), UsuarioIDKey, usuarioID)
-		siguiente.ServeHTTP(respuesta, peticion.WithContext(ctx))
-	})
+	}
 }

@@ -32,21 +32,20 @@ func main() {
 	// Un estudiante nuevo DEBE poder registrarse sin un Token previo
 	enrutador.Post("/api/v1/usuarios", servidor.CrearUsuario)
 
-	// Aquí irá tu endpoint público de login en el futuro:
-	// enrutador.Post("/api/v1/auth/login", servidor.Login)
+	// Endpoints públicos de autenticación (sin token previo)
+	enrutador.Route("/api/v1/auth", func(r chi.Router) {
+		r.Post("/registro", servidor.Registrar)
+		r.Post("/login", servidor.Login)
+	})
 
 	// ====================================================
 	// ZONA 2: RUTAS PROTEGIDAS (Bajo la vigilancia del Middleware)
 	// ====================================================
 	enrutador.Group(func(r chi.Router) {
-		// Activamos tu middleware de autenticación en español para proteger la lógica de negocio
-		// Nota: En un paso posterior inyectaremos aquí tu servicio de autenticación (ej: servidor.AuthService)
-		r.Use(middleware.AuthMiddleware)
+		// Activamos el middleware de autenticación, inyectándole el AuthService
+		// para que delegue ahí la verificación del token (igual que Registrar/Login)
+		r.Use(middleware.AuthMiddleware(servidor.AuthService))
 
-		r.Route("/api/v1/auth", func(r chi.Router) {
-			r.Post("/registro", servidor.Registrar)
-			r.Post("/login", servidor.Login)
-		})
 		// --- MÓDULO USUARIOS (ADMINISTRACIÓN PROTEGIDA) ---
 		r.Route("/api/v1/usuarios", func(r chi.Router) {
 			r.Get("/", servidor.ObtenerUsuarios)

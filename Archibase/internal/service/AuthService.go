@@ -1,3 +1,4 @@
+// Archivo: internal/service/auth.go
 package service
 
 import (
@@ -5,7 +6,6 @@ import (
 	"time"
 
 	"proyecto/internal/models"
-	"proyecto/internal/storage"
 
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
@@ -18,11 +18,21 @@ var claveSecretaJWT = []byte("mi_secreto_super_seguro_para_arquidraft")
 
 var duracionToken = time.Hour * 24
 
-type AuthService struct {
-	almacen *storage.SQLiteStorage
+// RepositorioUsuarios es la interfaz mínima que AuthService necesita del
+// almacenamiento. *storage.SQLiteStorage ya implementa estos dos métodos
+// (los tiene en sqlite.go), así que NO hay que tocar storage para nada:
+// simplemente cumple la interfaz "gratis". Esto es lo que nos permite
+// inyectar un mock en los tests sin tocar la base de datos real.
+type RepositorioUsuarios interface {
+	BuscarUsuarioPorEmail(email string) (models.Usuario, bool)
+	CrearUsuario(u models.Usuario) models.Usuario
 }
 
-func NuevoAuthService(a *storage.SQLiteStorage) *AuthService {
+type AuthService struct {
+	almacen RepositorioUsuarios
+}
+
+func NuevoAuthService(a RepositorioUsuarios) *AuthService {
 	return &AuthService{almacen: a}
 }
 
@@ -40,6 +50,8 @@ func (s *AuthService) Registrar(u models.Usuario) (models.Usuario, error) {
 		return models.Usuario{}, ErrCredencialesInvalidas
 	}
 
+	// Regla de negocio real que vamos a probar con mock:
+	// si el email ya existe, NUNCA debe llegar a CrearUsuario.
 	if _, existe := s.almacen.BuscarUsuarioPorEmail(u.Email); existe {
 		return models.Usuario{}, ErrEmailEnUso
 	}
