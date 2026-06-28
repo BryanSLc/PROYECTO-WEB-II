@@ -19,6 +19,9 @@ var (
 	ErrEvolucionNoEncontrada = errors.New("evolucion no encontrada")
 	ErrRecetaNoEncontrada    = errors.New("receta no encontrada")
 
+	// Errores de autenticación
+	ErrCredencialesInvalidas = errors.New("correo o contraseña incorrectos")
+
 	// Errores de Proveedores
 	ErrNombreProveedorObligatorio = errors.New("el nombre es obligatorio")
 	ErrProveedorNoEncontrado      = errors.New("proveedor no encontrado")

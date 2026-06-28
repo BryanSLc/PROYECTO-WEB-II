@@ -22,28 +22,26 @@ func main() {
 	// ====================================================
 	// CONFIGURACIÓN GLOBAL DE INTERCEPTORES (MIDDLEWARES)
 	// ====================================================
-	// Habilitamos CORS de manera global para permitir peticiones desde navegadores o herramientas externas
 	enrutador.Use(middleware.Cors)
 
 	// ====================================================
 	// ZONA 1: RUTAS PÚBLICAS (Sin Middleware / Acceso Libre)
 	// ====================================================
-
-	// Un estudiante nuevo DEBE poder registrarse sin un Token previo
 	enrutador.Post("/api/v1/usuarios", servidor.CrearUsuario)
 
-	// Aquí irá tu endpoint público de login en el futuro:
-	// enrutador.Post("/api/v1/auth/login", servidor.Login)
+	enrutador.Route("/api/v1/auth", func(r chi.Router) {
+		r.Post("/registro", servidor.Registrar)
+		r.Post("/login", servidor.Login)
+	})
 
 	// ====================================================
 	// ZONA 2: RUTAS PROTEGIDAS (Bajo la vigilancia del Middleware)
 	// ====================================================
 	enrutador.Group(func(r chi.Router) {
-		// Activamos tu middleware de autenticación en español para proteger la lógica de negocio
-		// Nota: En un paso posterior inyectaremos aquí tu servicio de autenticación (ej: servidor.AuthService)
-		r.Use(middleware.AuthMiddleware())
+		// El middleware necesita el AuthService para verificar el token
+		r.Use(middleware.AuthMiddleware(servidor.AuthService))
 
-		// --- MÓDULO USUARIOS (ADMINISTRACIÓN PROTEGIDA) ---
+		// --- MÓDULO USUARIOS ---
 		r.Route("/api/v1/usuarios", func(r chi.Router) {
 			r.Get("/", servidor.ObtenerUsuarios)
 			r.Get("/{id}", servidor.ObtenerUsuarioPorID)
@@ -73,8 +71,7 @@ func main() {
 			r.Delete("/{id}", servidor.EliminarReceta)
 		})
 
-		// --- MÓDULOS CON FUNCIONES GLOBALES (handlers.*) ---
-
+		// --- MÓDULO PROVEEDORES ---
 		r.Route("/api/v1/proveedores", func(r chi.Router) {
 			r.Post("/", servidor.CrearProveedor)
 			r.Get("/", servidor.ObtenerProveedores)
@@ -83,22 +80,7 @@ func main() {
 			r.Delete("/{id}", servidor.EliminarProveedor)
 		})
 
-		r.Route("/api/v1/asesores", func(r chi.Router) {
-			r.Get("/", handlers.GetAllAsesores)
-			r.Post("/", handlers.CreateAsesor)
-			r.Get("/{id}", handlers.GetAsesorByID)
-			r.Put("/{id}", handlers.UpdateAsesor)
-			r.Delete("/{id}", handlers.DeleteAsesor)
-		})
-
-		r.Route("/api/v1/contrataciones", func(r chi.Router) {
-			r.Get("/", handlers.ObtenerContrataciones)
-			r.Post("/", handlers.CrearContratacion)
-			r.Get("/{id}", handlers.ObtenerContratacionPorID)
-			r.Put("/{id}", handlers.ActualizarContratacion)
-			r.Delete("/{id}", handlers.EliminarContratacion)
-		})
-
+		// --- MÓDULO UBICACIONES ---
 		r.Route("/api/v1/ubicaciones", func(r chi.Router) {
 			r.Post("/", servidor.CrearUbicacion)
 			r.Get("/", servidor.ObtenerUbicaciones)
@@ -107,6 +89,25 @@ func main() {
 			r.Delete("/{id}", servidor.EliminarUbicacion)
 		})
 
+		// --- MÓDULO MATERIALES ---
+		r.Route("/api/v1/materiales", func(r chi.Router) {
+			r.Post("/", servidor.CrearMaterial)
+			r.Get("/", servidor.ObtenerMateriales)
+			r.Get("/{id}", servidor.ObtenerMaterialPorID)
+			r.Put("/{id}", servidor.ActualizarMaterial)
+			r.Delete("/{id}", servidor.EliminarMaterial)
+		})
+
+		// --- MÓDULO ASESORES (una sola vez) ---
+		r.Route("/api/v1/asesores", func(r chi.Router) {
+			r.Get("/", handlers.GetAllAsesores)
+			r.Post("/", handlers.CreateAsesor)
+			r.Get("/{id}", handlers.GetAsesorByID)
+			r.Put("/{id}", handlers.UpdateAsesor)
+			r.Delete("/{id}", handlers.DeleteAsesor)
+		})
+
+		// --- MÓDULO SERVICIOS (una sola vez) ---
 		r.Route("/api/v1/servicios", func(r chi.Router) {
 			r.Get("/", handlers.ObtenerServicios)
 			r.Post("/", handlers.CrearServicio)
@@ -115,12 +116,13 @@ func main() {
 			r.Delete("/{id}", handlers.EliminarServicio)
 		})
 
-		r.Route("/api/v1/materiales", func(r chi.Router) {
-			r.Post("/", servidor.CrearMaterial)
-			r.Get("/", servidor.ObtenerMateriales)
-			r.Get("/{id}", servidor.ObtenerMaterialPorID)
-			r.Put("/{id}", servidor.ActualizarMaterial)
-			r.Delete("/{id}", servidor.EliminarMaterial)
+		// --- MÓDULO CONTRATACIONES (una sola vez) ---
+		r.Route("/api/v1/contrataciones", func(r chi.Router) {
+			r.Get("/", handlers.ObtenerContrataciones)
+			r.Post("/", handlers.CrearContratacion)
+			r.Get("/{id}", handlers.ObtenerContratacionPorID)
+			r.Put("/{id}", handlers.ActualizarContratacion)
+			r.Delete("/{id}", handlers.EliminarContratacion)
 		})
 	})
 
