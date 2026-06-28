@@ -30,6 +30,9 @@ func NuevoSQLiteStorage(pathDB string) *SQLiteStorage {
 		&models.Proveedor{},
 		&models.MaterialProveedor{},
 		&models.Ubicacion{},
+		&models.Asesor{},
+		&models.Servicio{},
+		&models.Contratacion{},
 	)
 	if err != nil {
 		log.Fatalf("Error al realizar la migración: %v", err)
@@ -340,4 +343,126 @@ func (s *SQLiteStorage) ActualizarReceta(id int, datos models.Receta) (models.Re
 func (s *SQLiteStorage) EliminarReceta(id int) bool {
 	resultado := s.db.Delete(&models.Receta{}, id)
 	return resultado.RowsAffected > 0
+}
+
+// MÉTODOS PARA ASESORES
+func (s *SQLiteStorage) CrearAsesor(a models.Asesor) models.Asesor {
+	s.db.Create(&a)
+	return a
+}
+func (s *SQLiteStorage) ListarAsesores() []models.Asesor {
+	var lista []models.Asesor
+	s.db.Find(&lista)
+	return lista
+}
+func (s *SQLiteStorage) BuscarAsesorPorID(id int) (models.Asesor, bool) {
+	var a models.Asesor
+	if err := s.db.First(&a, id).Error; err != nil {
+		return models.Asesor{}, false
+	}
+	return a, true
+}
+func (s *SQLiteStorage) ActualizarAsesor(id int, datos models.Asesor) (models.Asesor, bool) {
+	var a models.Asesor
+	if err := s.db.First(&a, id).Error; err != nil {
+		return models.Asesor{}, false
+	}
+	a.Nombre = datos.Nombre
+	a.Especialidad = datos.Especialidad
+	a.Experiencia = datos.Experiencia
+	a.Contacto = datos.Contacto
+	a.Modalidad = datos.Modalidad
+	s.db.Save(&a)
+	return a, true
+}
+func (s *SQLiteStorage) EliminarAsesor(id int) bool {
+	return s.db.Delete(&models.Asesor{}, id).RowsAffected > 0
+}
+
+// =====================
+// MÉTODOS PARA CONTRATACION
+// =====================
+
+func (s *SQLiteStorage) CrearContratacion(c models.Contratacion) models.Contratacion {
+	s.db.Create(&c)
+	return c
+}
+func (s *SQLiteStorage) ListarContrataciones() []models.Contratacion {
+	var lista []models.Contratacion
+	s.db.Find(&lista)
+	return lista
+}
+func (s *SQLiteStorage) BuscarContratacionPorID(id int) (models.Contratacion, bool) {
+	var c models.Contratacion
+
+	if err := s.db.First(&c, id).Error; err != nil {
+		return models.Contratacion{}, false
+	}
+
+	return c, true
+}
+
+func (s *SQLiteStorage) ActualizarContratacion(id int, datos models.Contratacion) (models.Contratacion, bool) {
+	var c models.Contratacion
+
+	if err := s.db.First(&c, id).Error; err != nil {
+		return models.Contratacion{}, false
+	}
+
+	c.Estudiante = datos.Estudiante
+	c.Fecha = datos.Fecha
+	c.Estado = datos.Estado
+	c.IDservicio = datos.IDservicio
+
+	s.db.Save(&c)
+
+	return c, true
+}
+
+func (s *SQLiteStorage) EliminarContratacion(id int) bool {
+	result := s.db.Delete(&models.Contratacion{}, id)
+	return result.RowsAffected > 0
+}
+
+// =====================
+// MÉTODOS PARA SERVICIO
+// =====================
+func (s *SQLiteStorage) CrearServicio(serv models.Servicio) models.Servicio {
+	s.db.Create(&serv)
+	return serv
+}
+func (s *SQLiteStorage) ListarServicios() []models.Servicio {
+	var lista []models.Servicio
+	s.db.Find(&lista)
+	return lista
+}
+func (s *SQLiteStorage) BuscarServicioPorID(id int) (models.Servicio, bool) {
+	var serv models.Servicio
+
+	if err := s.db.First(&serv, id).Error; err != nil {
+		return models.Servicio{}, false
+	}
+
+	return serv, true
+}
+func (s *SQLiteStorage) ActualizarServicio(id int, datos models.Servicio) (models.Servicio, bool) {
+	var serv models.Servicio
+
+	if err := s.db.First(&serv, id).Error; err != nil {
+		return models.Servicio{}, false
+	}
+
+	serv.Titulo = datos.Titulo
+	serv.Descripcion = datos.Descripcion
+	serv.Precio = datos.Precio
+	serv.Disponibilidad = datos.Disponibilidad
+	serv.IDasesor = datos.IDasesor
+
+	s.db.Save(&serv)
+
+	return serv, true
+}
+func (s *SQLiteStorage) EliminarServicio(id int) bool {
+	result := s.db.Delete(&models.Servicio{}, id)
+	return result.RowsAffected > 0
 }
