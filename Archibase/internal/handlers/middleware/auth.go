@@ -23,9 +23,9 @@ const UsuarioIDKey contextKey = "usuario_id"
 // - En tests se usa como: r.Use(middleware.AuthMiddleware(authService))
 //
 // Para soportar ambos patrones, implementamos una firma que acepta un optional.
-func AuthMiddleware(siguiente http.Handler, _ ...any) http.Handler {
-	return http.HandlerFunc(func(respuesta http.ResponseWriter, peticion *http.Request) {
-
+func AuthMiddleware(a ...any) func(http.Handler) http.Handler {
+	return func(siguiente http.Handler) http.Handler {
+		return http.HandlerFunc(func(respuesta http.ResponseWriter, peticion *http.Request) {
 			// 1. Leer el encabezado de Autorización
 			cabecera := peticion.Header.Get("Authorization")
 			if cabecera == "" {

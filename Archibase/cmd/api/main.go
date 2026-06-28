@@ -41,7 +41,7 @@ func main() {
 	enrutador.Group(func(r chi.Router) {
 		// Activamos tu middleware de autenticación en español para proteger la lógica de negocio
 		// Nota: En un paso posterior inyectaremos aquí tu servicio de autenticación (ej: servidor.AuthService)
-		r.Use(middleware.AuthMiddleware)
+		r.Use(middleware.AuthMiddleware())
 
 		// --- MÓDULO USUARIOS (ADMINISTRACIÓN PROTEGIDA) ---
 		r.Route("/api/v1/usuarios", func(r chi.Router) {
