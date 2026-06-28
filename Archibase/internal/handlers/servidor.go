@@ -8,6 +8,7 @@ import (
 // Servidor ahora agrupa las capas de servicios de negocio inyectadas
 type Servidor struct {
 	Almacen          *storage.SQLiteStorage
+	AsesorService    *service.AsesorService
 	ProveedorService *service.ProveedorService
 	MaterialService  *service.MaterialService
 	UsuarioService   *service.UsuarioService
@@ -20,6 +21,7 @@ type Servidor struct {
 func NuevoServidor(a *storage.SQLiteStorage) *Servidor {
 	return &Servidor{
 		Almacen:          a,
+		AsesorService:    service.NuevoAsesorService(a),
 		ProveedorService: service.NuevoProveedorService(a),
 		MaterialService:  service.NuevoMaterialService(a),
 		UsuarioService:   service.NuevoUsuarioService(a),

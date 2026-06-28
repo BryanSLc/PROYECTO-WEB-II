@@ -2,104 +2,57 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
+	"errors"
 	"net/http"
 	"strconv"
 
 	"proyecto/internal/models"
-	"proyecto/internal/storage"
+	"proyecto/internal/service"
 
 	"github.com/go-chi/chi/v5"
 )
 
-func GetAllAsesores(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	fmt.Println("--> Obteniendo todos los asesores")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(storage.GetAllAsesores())
-}
-
-func GetAsesorByID(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.Atoi(chi.URLParam(r, "id"))
-	if err != nil {
-		fmt.Println("--> ID invalido")
-		http.Error(w, `{"error":"ID invalido"}`, http.StatusBadRequest)
-		return
-	}
-	asesor, err := storage.GetAsesorByID(id)
-	if err != nil {
-		fmt.Println("--> Asesor no encontrado con ID:", id)
-		http.Error(w, `{"error":"asesor no encontrado"}`, http.StatusNotFound)
-		return
-	}
-	fmt.Println("--> Asesor encontrado con ID:", id)
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(asesor)
-}
-
-func CreateAsesor(w http.ResponseWriter, r *http.Request) {
+// CrearAsesor crea un asesor usando el servicio inyectado.
+func (s *Servidor) CrearAsesor(w http.ResponseWriter, r *http.Request) {
 	var a models.Asesor
 	if err := json.NewDecoder(r.Body).Decode(&a); err != nil {
-		fmt.Println("--> Body invalido")
-		http.Error(w, `{"error":"body invalido"}`, http.StatusBadRequest)
+		RespondError(w, http.StatusBadRequest, "body invalido")
 		return
 	}
-	if a.Nombre == "" || a.Especialidad == "" || a.Contacto == "" || a.Modalidad == "" {
-		fmt.Println("--> Campos requeridos faltantes")
-		http.Error(w, `{"error":"nombre, especialidad, contacto y modalidad son requeridos"}`, http.StatusBadRequest)
+
+	asesor, err := s.AsesorService.Crear(a)
+	if err != nil {
+		if errors.Is(err, service.ErrNombreAsesorObligatorio) {
+			RespondError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		RespondError(w, http.StatusInternalServerError, "Error interno del servidor")
 		return
 	}
-	fmt.Println("--> Asesor creado")
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(storage.CreateAsesor(a))
+
+	RespondJSON(w, http.StatusCreated, asesor)
 }
 
-func UpdateAsesor(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.Atoi(chi.URLParam(r, "id"))
-	if err != nil {
-		fmt.Println("--> ID invalido")
-		http.Error(w, `{"error":"ID invalido"}`, http.StatusBadRequest)
-		return
-	}
-	var a models.Asesor
-	if err := json.NewDecoder(r.Body).Decode(&a); err != nil {
-		fmt.Println("--> Body invalido")
-		http.Error(w, `{"error":"body invalido"}`, http.StatusBadRequest)
-		return
-	}
-	if a.Nombre == "" || a.Especialidad == "" || a.Contacto == "" || a.Modalidad == "" {
-		fmt.Println("--> Campos requeridos faltantes")
-		http.Error(w, `{"error":"nombre, especialidad, contacto y modalidad son requeridos"}`, http.StatusBadRequest)
-		return
-	}
-	actualizado, err := storage.UpdateAsesor(id, a)
-	if err != nil {
-		fmt.Println("--> Asesor no encontrado con ID:", id)
-		http.Error(w, `{"error":"asesor no encontrado"}`, http.StatusNotFound)
-		return
-	}
-	fmt.Println("--> Asesor actualizado con ID:", id)
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(actualizado)
+func (s *Servidor) ObtenerAsesores(w http.ResponseWriter, _ *http.Request) {
+	RespondJSON(w, http.StatusOK, s.AsesorService.Listar())
 }
 
-func DeleteAsesor(w http.ResponseWriter, r *http.Request) {
+func (s *Servidor) ObtenerAsesorPorID(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(chi.URLParam(r, "id"))
 	if err != nil {
-		fmt.Println("--> ID invalido")
-		http.Error(w, `{"error":"ID invalido"}`, http.StatusBadRequest)
+		RespondError(w, http.StatusBadRequest, "ID invalido")
 		return
 	}
-	if err := storage.DeleteAsesor(id); err != nil {
-		fmt.Println("--> Asesor no encontrado con ID:", id)
-		http.Error(w, `{"error":"asesor no encontrado"}`, http.StatusNotFound)
+
+	asesor, err := s.AsesorService.BuscarPorID(id)
+	if err != nil {
+		if errors.Is(err, service.ErrAsesorNoEncontrado) {
+			RespondError(w, http.StatusNotFound, err.Error())
+			return
+		}
+		RespondError(w, http.StatusInternalServerError, "Error interno del servidor")
 		return
 	}
-	fmt.Println("--> Asesor eliminado con ID:", id)
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"mensaje": "asesor eliminado"})
+
+	RespondJSON(w, http.StatusOK, asesor)
 }

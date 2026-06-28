@@ -1,7 +1,7 @@
 package models
 
 type Asesor struct {
-	IDasesor     int    `json:"id_asesor"`
+	IDasesor     int    `json:"id_asesor" gorm:"primaryKey"`
 	Nombre       string `json:"nombre"`
 	Especialidad string `json:"especialidad"`
 	Experiencia  string `json:"experiencia"`

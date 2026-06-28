@@ -350,6 +350,7 @@ func (s *SQLiteStorage) CrearAsesor(a models.Asesor) models.Asesor {
 	s.db.Create(&a)
 	return a
 }
+
 func (s *SQLiteStorage) ListarAsesores() []models.Asesor {
 	var lista []models.Asesor
 	s.db.Find(&lista)
