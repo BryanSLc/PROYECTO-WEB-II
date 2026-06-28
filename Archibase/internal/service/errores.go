@@ -11,6 +11,7 @@ var (
 	ErrIDMaquetaObligatorio    = errors.New("el ID de la maqueta es obligatorio")
 	ErrTituloAvanceObligatorio = errors.New("el titulo del avance es obligatorio")
 	ErrPasoInvalido            = errors.New("el numero de paso debe ser mayor a 0")
+	ErrEmailEnUso              = errors.New("el correo electronico ya está en uso")
 
 	// Errores de recursos no encontrados
 	ErrUsuarioNoEncontrado   = errors.New("usuario no encontrado")

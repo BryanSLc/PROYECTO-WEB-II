@@ -7,6 +7,10 @@ import "proyecto/internal/models"
 // No implementa lógica real.
 type fakeRepositorioUsuarios struct{}
 
-func (f *fakeRepositorioUsuarios) BuscarPorEmail(email string) (models.Usuario, bool) {
+func (f *fakeRepositorioUsuarios) BuscarUsuarioPorEmail(email string) (models.Usuario, bool) {
 	return models.Usuario{}, false
+}
+
+func (f *fakeRepositorioUsuarios) CrearUsuario(u models.Usuario) models.Usuario {
+	return u
 }
