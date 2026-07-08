@@ -1,0 +1,10 @@
+  docker:
+    runs-on: ubuntu-latest
+    needs: verificar
+    steps:
+      - name: Clonar el repositorio
+        uses: actions/checkout@v7
+ 
+      - name: Construir imagen
+        run: docker build -t proyecto-api:ci .
+ 
