@@ -1,15 +1,20 @@
 package service
 
-import (
-	"proyecto/internal/models"
-	"proyecto/internal/storage"
-)
+import "proyecto/internal/models"
 
-type UsuarioService struct {
-	almacen *storage.SQLiteStorage
+type RepositorioUsuariosService interface {
+	CrearUsuario(models.Usuario) models.Usuario
+	ListarUsuarios() []models.Usuario
+	BuscarUsuarioPorID(int) (models.Usuario, bool)
+	ActualizarUsuario(int, models.Usuario) (models.Usuario, bool)
+	EliminarUsuario(int) bool
 }
 
-func NuevoUsuarioService(a *storage.SQLiteStorage) *UsuarioService {
+type UsuarioService struct {
+	almacen RepositorioUsuariosService
+}
+
+func NuevoUsuarioService(a RepositorioUsuariosService) *UsuarioService {
 	return &UsuarioService{almacen: a}
 }
 

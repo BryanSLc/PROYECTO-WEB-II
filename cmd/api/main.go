@@ -13,7 +13,7 @@ import (
 
 func main() {
 	// 1. Inicializamos el almacenamiento en SQLite (creará automáticamente el archivo archibase.db)
-	almacen := storage.NuevoSQLiteStorage("./archibase.db")
+	almacen := storage.NuevoStorage()
 
 	// 2. Inyectamos el almacén persistente al servidor de handlers
 	servidor := handlers.NuevoServidor(almacen)

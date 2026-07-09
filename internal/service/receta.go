@@ -1,15 +1,21 @@
 package service
 
-import (
-	"proyecto/internal/models"
-	"proyecto/internal/storage"
-)
+import "proyecto/internal/models"
 
-type RecetaService struct {
-	almacen *storage.SQLiteStorage
+type RepositorioRecetas interface {
+	CrearReceta(models.Receta) models.Receta
+	ListarRecetas() []models.Receta
+	ListarRecetasPorMaqueta(int) []models.Receta
+	BuscarRecetaPorID(int) (models.Receta, bool)
+	ActualizarReceta(int, models.Receta) (models.Receta, bool)
+	EliminarReceta(int) bool
 }
 
-func NuevoRecetaService(a *storage.SQLiteStorage) *RecetaService {
+type RecetaService struct {
+	almacen RepositorioRecetas
+}
+
+func NuevoRecetaService(a RepositorioRecetas) *RecetaService {
 	return &RecetaService{almacen: a}
 }
 

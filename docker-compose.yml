@@ -1,0 +1,39 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: archibase_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-archibase}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-archibase}
+      POSTGRES_DB: ${DB_NAME:-archibase}
+    ports:
+      - "5432:5432"
+    volumes:
+      - archibase_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-archibase} -d ${DB_NAME:-archibase}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    container_name: archibase_app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-archibase}
+      DB_PASSWORD: ${DB_PASSWORD:-archibase}
+      DB_NAME: ${DB_NAME:-archibase}
+      DB_SSLMODE: ${DB_SSLMODE:-disable}
+      APP_PORT: ${APP_PORT:-8080}
+    ports:
+      - "8080:8080"
+
+volumes:
+  archibase_pgdata:

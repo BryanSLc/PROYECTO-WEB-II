@@ -1,15 +1,23 @@
 package service
 
-import (
-	"proyecto/internal/models"
-	"proyecto/internal/storage"
-)
+import "proyecto/internal/models"
 
-type MaquetaService struct {
-	almacen *storage.SQLiteStorage
+type RepositorioMaquetas interface {
+	CrearMaqueta(models.Maqueta) models.Maqueta
+	ListarMaquetas() []models.Maqueta
+	BuscarMaquetaPorID(int) (models.Maqueta, bool)
+	ActualizarMaqueta(int, models.Maqueta) (models.Maqueta, bool)
+	EliminarMaqueta(int) bool
+	AgregarEvolucion(models.EvolucionMaqueta) models.EvolucionMaqueta
+	ListarEvolucionPorMaqueta(int) []models.EvolucionMaqueta
+	EliminarEvolucion(int) bool
 }
 
-func NuevoMaquetaService(a *storage.SQLiteStorage) *MaquetaService {
+type MaquetaService struct {
+	almacen RepositorioMaquetas
+}
+
+func NuevoMaquetaService(a RepositorioMaquetas) *MaquetaService {
 	return &MaquetaService{almacen: a}
 }
 
@@ -50,7 +58,6 @@ func (s *MaquetaService) Eliminar(id int) error {
 	return nil
 }
 
-// Métodos de Evolución de la Maqueta
 func (s *MaquetaService) AgregarEvolucion(e models.EvolucionMaqueta) (models.EvolucionMaqueta, error) {
 	if e.MaquetaID == 0 {
 		return models.EvolucionMaqueta{}, ErrIDMaquetaObligatorio

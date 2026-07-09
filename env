@@ -1,0 +1,7 @@
+DB_HOST=db
+DB_PORT=5432
+DB_USER=archibase
+DB_PASSWORD=archibase
+DB_NAME=archibase
+DB_SSLMODE=disable
+APP_PORT=8080

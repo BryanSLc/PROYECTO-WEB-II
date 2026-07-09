@@ -5,9 +5,11 @@ import (
 	"proyecto/internal/storage"
 )
 
-// Servidor ahora agrupa las capas de servicios de negocio inyectadas
+// Servidor ahora usa la interfaz storage.Almacen en vez de *storage.SQLiteStorage.
+// Esto permite que tanto SQLiteStorage (tests) como PostgresStorage (Docker)
+// se inyecten sin cambiar nada más.
 type Servidor struct {
-	Almacen          *storage.SQLiteStorage
+	Almacen          storage.Almacen
 	AsesorService    *service.AsesorService
 	ProveedorService *service.ProveedorService
 	MaterialService  *service.MaterialService
@@ -18,8 +20,8 @@ type Servidor struct {
 	AuthService      *service.AuthService
 }
 
-// NuevoServidor construye la instancia inyectando las dependencias requeridas
-func NuevoServidor(a *storage.SQLiteStorage) *Servidor {
+// NuevoServidor acepta cualquier implementación de storage.Almacen
+func NuevoServidor(a storage.Almacen) *Servidor {
 	return &Servidor{
 		Almacen:          a,
 		AsesorService:    service.NuevoAsesorService(a),
