@@ -1,26 +1,66 @@
 name: CI
- 
+
 on:
   push:
+    branches: [ "main", "master" ]
   pull_request:
- 
+    branches: [ "main", "master" ]
+
 jobs:
-  verificar:
+  build-and-test:
+    name: Build & Test
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: archibase
+          POSTGRES_PASSWORD: archibase
+          POSTGRES_DB: archibase
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_USER: archibase
+      DB_PASSWORD: archibase
+      DB_NAME: archibase
+      DB_SSLMODE: disable
+
     steps:
-      - name: Clonar el repositorio
-        uses: actions/checkout@v7
- 
-      - name: Instalar Go
-        uses: actions/setup-go@v6
+      - name: Clonar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Go
+        uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
- 
-      - name: Compilar (go build)
-        run: go build ./...
- 
-      - name: Analizar código (go vet)
+          cache: true
+
+      - name: Descargar dependencias
+        run: go mod download
+
+      - name: Vet (análisis estático)
         run: go vet ./...
- 
-      - name: Ejecutar tests (go test)
-        run: go test -v ./...
+
+      - name: Compilar
+        run: go build ./...
+
+      - name: Ejecutar tests con cobertura
+        run: go test ./... -coverprofile=cover.out
+
+      - name: Mostrar resumen de cobertura
+        run: go tool cover -func=cover.out | tail -n 1
+
+      - name: Subir reporte de cobertura
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: cover.out
